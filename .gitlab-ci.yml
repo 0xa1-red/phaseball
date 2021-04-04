@@ -16,7 +16,7 @@ test:
 
 release:
   stage: release
-  image: docker pull registry.gitlab.com/juhani/go-semrel-gitlab:v0.21.1
+  image: registry.gitlab.com/juhani/go-semrel-gitlab:v0.21.1
   script:
     - ls -la
   when: manual
