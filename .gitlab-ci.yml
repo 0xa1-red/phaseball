@@ -1,10 +1,24 @@
 image: golang:1.16-buster
 
+stages:
+  - checks
+  - release
+
 test:
-    script:
-        - go test -v -cover ./...
-    only:
-        - tags
-        - /^trunk$/
-        - web
-        - merge_requests
+  stage: checks
+  script:
+    - go test -v -cover ./...
+  only:
+    - tags
+    - /^trunk$/
+    - web
+    - merge_requests
+
+release:
+  stage: release
+  image: docker pull registry.gitlab.com/juhani/go-semrel-gitlab:v0.21.1
+  script:
+    - ls -la
+  when: manual
+  only:
+    - master
