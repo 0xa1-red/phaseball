@@ -21,4 +21,4 @@ release:
     - ls -la
   when: manual
   only:
-    - master
+    - /^trunk$/
