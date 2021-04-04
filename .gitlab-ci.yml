@@ -1,0 +1,10 @@
+image: golang:1.16-buster
+
+test:
+    script:
+        - go test -v -cover ./...
+    only:
+        - tags
+        - /^trunk$/
+        - web
+        - merge_requests
