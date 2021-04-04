@@ -4,6 +4,17 @@ stages:
   - checks
   - release
 
+lint:
+  stage: checks
+  image: golangci/golangci-lint:v1.39.0
+  script:
+    - docker run --rm -v $(pwd):/phaseball -w /phaseball golangci/golangci-lint:v1.39.0 golangci-lint run -v
+  only:
+    - tags
+    - /^trunk$/
+    - web
+    - merge_requests
+
 test:
   stage: checks
   script:
@@ -18,7 +29,7 @@ release:
   stage: release
   image: registry.gitlab.com/juhani/go-semrel-gitlab:v0.21.1
   script:
-    - alias release='docker run -w /phaseball -v /Users/brvy/code/golang/phaseball:/phaseball --platform linux/amd64 registry.gitlab.com/juhani/go-semrel-gitlab:v0.21.1 release changelog phaseball'
+    - alias release='docker --rm run -w /phaseball -v /Users/brvy/code/golang/phaseball:/phaseball --platform linux/amd64 registry.gitlab.com/juhani/go-semrel-gitlab:v0.21.1 release changelog phaseball'
     - release -v
     - release changelog
     - release commit-and-tag CHANGELOG.md release_info
