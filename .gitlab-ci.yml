@@ -21,7 +21,7 @@ release:
     - alias release='docker run -w /phaseball -v /Users/brvy/code/golang/phaseball:/phaseball --platform linux/amd64 registry.gitlab.com/juhani/go-semrel-gitlab:v0.21.1 release changelog phaseball'
     - release -v
     - release changelog
-    - cat CHANGELOG.md
+    - release commit-and-tag CHANGELOG.md release_info
   when: manual
   only:
     - /^trunk$/
