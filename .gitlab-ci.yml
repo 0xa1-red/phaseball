@@ -29,9 +29,9 @@ release:
   stage: release
   image: registry.gitlab.com/juhani/go-semrel-gitlab:v0.21.1
   script:
-    - ./release -v
-    - ./release changelog
-    - ./release commit-and-tag CHANGELOG.md release_info
+    - /usr/bin/release -v
+    - /usr/bin/release changelog
+    - /usr/bin/release commit-and-tag CHANGELOG.md release_info
   when: manual
   only:
     - /^trunk$/
