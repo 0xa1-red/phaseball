@@ -8,6 +8,7 @@ import (
 
 type ExtendedEvent struct {
 	Event Event
+	Long  string
 	Extra string
 }
 
@@ -55,40 +56,23 @@ const (
 )
 
 var ExtendedEventMapping = map[Event]ExtendedEvent{
-	EventOutK:  {EventHitOut, "K"},
-	EventOutG3: {EventHitOut, "G-3"},
-	EventOut43: {EventHitOut, "4-3"},
-	EventOut53: {EventHitOut, "5-3"},
-	EventOut63: {EventHitOut, "6-3"},
-	EventOutF7: {EventHitOut, "F-7"},
-	EventOutF8: {EventHitOut, "F-8"},
-	EventOutF9: {EventHitOut, "F-9"},
+	EventHitHomeRun: {Event: EventHitHomeRun, Long: "Home run", Extra: ""},
+	EventOutK:       {Event: EventHitOut, Long: "Strikeout", Extra: "K"},
+	EventOutG3:      {Event: EventHitOut, Long: "Groundout to first", Extra: "G-3"},
+	EventOut43:      {Event: EventHitOut, Long: "Groundout to second", Extra: "4-3"},
+	EventOut53:      {Event: EventHitOut, Long: "Groundout to third", Extra: "5-3"},
+	EventOut63:      {Event: EventHitOut, Long: "Groundout to short", Extra: "6-3"},
+	EventOutF7:      {Event: EventHitOut, Long: "Flyout to left field", Extra: "F-7"},
+	EventOutF8:      {Event: EventHitOut, Long: "Flyout to center field", Extra: "F-8"},
+	EventOutF9:      {Event: EventHitOut, Long: "Flyout to right field", Extra: "F-9"},
 }
 
-func (e Event) Long() string {
-	switch e {
-	case EventHitHomeRun:
-		return "Home run"
-	case EventHitOut:
-		return "Out"
-	case EventOutK:
-		return "Strikeout"
-	case EventOutG3:
-		return "Groundout to first"
-	case EventOut43:
-		return "Groundout to second"
-	case EventOut53:
-		return "Groundout to third"
-	case EventOut63:
-		return "Groundout to short"
-	case EventOutF7:
-		return "Flyout to left field"
-	case EventOutF8:
-		return "Flyout to center field"
-	case EventOutF9:
-		return "Flyout to right field"
+func (e ExtendedEvent) GetLong() string {
+	if e.Long != "" {
+		return e.Long
 	}
-	return string(e)
+
+	return string(e.Event)
 }
 
 func (e Event) Short() string {
@@ -97,6 +81,16 @@ func (e Event) Short() string {
 
 func Hit(swing int, crit bool) (result Event, extra bool, out bool) {
 	roll := dice.Roll(20, 1, 0)
+
+	return hit(swing, crit, roll)
+}
+
+func hit(swing int, crit bool, roll int) (Event, bool, bool) {
+	var (
+		result Event
+		extra  bool
+		out    bool
+	)
 
 	if roll >= 19 || crit && roll == 18 {
 		result, extra, out = EventHitHomeRun, false, false
@@ -134,7 +128,7 @@ func Hit(swing int, crit bool) (result Event, extra bool, out bool) {
 		result, extra, out = EventHitSinglePlus, false, false
 	}
 
-	return
+	return result, extra, out
 }
 
 func Defense(hit Event) (result Event, extra bool, out bool) {

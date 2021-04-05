@@ -1,6 +1,7 @@
 package deadball
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 )
@@ -70,21 +71,21 @@ func TestInning_PossibleDouble(t *testing.T) {
 			outs:          1,
 			label:         "double play",
 			swing:         75,
-			expectedEvent: ExtendedEvent{EventHitDoublePlay, "4-3"},
+			expectedEvent: ExtendedEvent{Event: EventHitDoublePlay, Extra: "4-3"},
 			expectedOuts:  2,
 		},
 		{
 			outs:          1,
 			label:         "fielders choice",
 			swing:         66,
-			expectedEvent: ExtendedEvent{EventHitFieldersChoice, "4-3"},
+			expectedEvent: ExtendedEvent{Event: EventHitFieldersChoice, Extra: "4-3"},
 			expectedOuts:  1,
 		},
 		{
 			outs:          1,
-			label:         strings.ToLower(EventOut43.Long()),
+			label:         strings.ToLower(ExtendedEventMapping[EventOut43].GetLong()),
 			swing:         51,
-			expectedEvent: ExtendedEvent{EventHitOut, "4-3"},
+			expectedEvent: ExtendedEvent{Event: EventHitOut, Extra: "4-3"},
 			expectedOuts:  1,
 		},
 	}
@@ -136,7 +137,7 @@ func TestInning_ProductiveOut(t *testing.T) {
 			p2:            nil,
 			p3:            nil,
 			expectedRuns:  make([]*Player, 0),
-			expectedEvent: ExtendedEvent{EventHitOut, "F-7"},
+			expectedEvent: ExtendedEvent{Event: EventHitOut, Extra: "F-7"},
 		},
 		{
 			label:         "second base",
@@ -144,7 +145,7 @@ func TestInning_ProductiveOut(t *testing.T) {
 			p2:            team.Players[0],
 			p3:            nil,
 			expectedRuns:  make([]*Player, 0),
-			expectedEvent: ExtendedEvent{EventHitProductiveOut, "F-7"},
+			expectedEvent: ExtendedEvent{Event: EventHitProductiveOut, Extra: "F-7"},
 		},
 		{
 			label:         "second and third base",
@@ -152,7 +153,7 @@ func TestInning_ProductiveOut(t *testing.T) {
 			p2:            team.Players[1],
 			p3:            team.Players[0],
 			expectedRuns:  []*Player{team.Players[0]},
-			expectedEvent: ExtendedEvent{EventHitProductiveOut, "F-7"},
+			expectedEvent: ExtendedEvent{Event: EventHitProductiveOut, Extra: "F-7"},
 		},
 		{
 			label:         "third base",
@@ -160,7 +161,7 @@ func TestInning_ProductiveOut(t *testing.T) {
 			p2:            nil,
 			p3:            team.Players[0],
 			expectedRuns:  []*Player{team.Players[0]},
-			expectedEvent: ExtendedEvent{EventHitProductiveOut, "F-7"},
+			expectedEvent: ExtendedEvent{Event: EventHitProductiveOut, Extra: "F-7"},
 		},
 	}
 
@@ -443,4 +444,65 @@ func TestOneSingleAndTriple(t *testing.T) {
 		}
 		t.Log("Pass")
 	}
+}
+
+func TestSwingEvent(t *testing.T) {
+	tests := []struct {
+		swing            int
+		bt               int
+		expectedEventKey int
+	}{
+		{
+			swing:            71,
+			expectedEventKey: EventPossibleDbl,
+		},
+		{
+			swing:            60,
+			bt:               50,
+			expectedEventKey: EventProdOut,
+		},
+		{
+			swing:            52,
+			bt:               50,
+			expectedEventKey: EventWalk,
+		},
+		{
+			swing:            10,
+			bt:               10,
+			expectedEventKey: EventHit,
+		},
+		{
+			swing:            1,
+			bt:               10,
+			expectedEventKey: EventCrit,
+		},
+	}
+
+	for i, tt := range tests {
+		label := fmt.Sprintf("Case %d - Swing: %d - BT: %d", i+1, tt.swing, tt.bt)
+		tf := func(t *testing.T) {
+			t.Log(label)
+
+			if expected, actual := tt.expectedEventKey, swingEvent(tt.swing, tt.bt); expected != actual {
+				t.Fatalf("Fail: expected %d, got %d", expected, actual)
+			}
+
+			t.Log("Pass")
+		}
+
+		t.Run(label, tf)
+	}
+}
+
+func TestDiamond_String(t *testing.T) {
+	d := newDiamond()
+	d.Bases[1].Player = team.Players[0]
+
+	expected := "\tFirst : empty\n\tSecond : Anna Test\n\tThird : empty\n\tHome : empty\n"
+
+	if actual := d.String(); expected != actual {
+		t.Fatalf("Fail: expected:\n%s\ngot:\n%s", expected, actual)
+	}
+
+	t.Log("Pass")
 }

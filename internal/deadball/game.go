@@ -192,12 +192,12 @@ func (i *Inning) ProductiveOut(swing int, outEvent Event) (ExtendedEvent, []*Pla
 			if pp := i.Diamond.Bases[1].Load(nil); pp != nil {
 				runners = append(runners, pp)
 			}
-			event = ExtendedEvent{EventHitProductiveOut, event.Extra}
+			event = ExtendedEvent{Event: EventHitProductiveOut, Extra: event.Extra}
 		} else if i.Diamond.Bases[2].Player != nil {
 			if runner := i.Diamond.Bases[2].Load(nil); runner != nil {
 				runners = append(runners, runner)
 			}
-			event = ExtendedEvent{EventHitProductiveOut, event.Extra}
+			event = ExtendedEvent{Event: EventHitProductiveOut, Extra: event.Extra}
 		}
 	}
 
@@ -210,11 +210,11 @@ func (i *Inning) PossibleDouble(swing int, outEvent Event, p *Player) ExtendedEv
 	if i.Diamond.Bases[0].Player != nil && IsOutInfield(outEvent) && digit >= 3 && digit < 7 {
 		if swing >= 70 {
 			i.Diamond.Bases[0].Player = nil
-			event = ExtendedEvent{EventHitDoublePlay, event.Extra}
+			event = ExtendedEvent{Event: EventHitDoublePlay, Extra: event.Extra}
 			i.Outs++
 		} else {
 			i.Diamond.Bases[0].Player = p
-			event = ExtendedEvent{EventHitFieldersChoice, event.Extra}
+			event = ExtendedEvent{Event: EventHitFieldersChoice, Extra: event.Extra}
 		}
 	}
 
@@ -247,24 +247,7 @@ func (i *Inning) AtBat() {
 	_, pitchRoll := i.Pitcher.Pitch(p.Hand)
 
 	swing := dice.Roll(100, 1, 0) + pitchRoll
-	str := fmt.Sprintf("BT: %d | SS: %d", p.BatterTarget, swing)
-	if swing >= 71 {
-		str = fmt.Sprintf("%s | Result: %s", str, "Possible double")
-		eventKey = EventPossibleDbl
-	} else if swing >= int(p.BatterTarget)+6 {
-		str = fmt.Sprintf("%s | Result: %s", str, "Productive out")
-		eventKey = EventProdOut
-	} else if swing >= int(p.BatterTarget)+1 {
-		str = fmt.Sprintf("%s | Result: %s", str, "Walk")
-		eventKey = EventWalk
-	} else if swing >= 6 {
-		str = fmt.Sprintf("%s | Result: %s", str, "Hit")
-		eventKey = EventHit
-	} else {
-		str = fmt.Sprintf("%s | Result: %s", str, "Critical")
-		eventKey = EventCrit
-	}
-	log.Debug(str)
+	eventKey = swingEvent(swing, int(p.BatterTarget))
 
 	eventStr := events[eventKey]
 
@@ -284,7 +267,7 @@ func (i *Inning) AtBat() {
 			}
 		}
 
-		l.Event = ExtendedEvent{hitResult, ""}
+		l.Event = ExtendedEvent{Event: hitResult, Extra: ""}
 
 		switch hitResult {
 		case EventHitSinglePlus:
@@ -339,10 +322,10 @@ func (i *Inning) AtBat() {
 				scored += len(runs)
 			}
 			if extra {
-				l.Event = ExtendedEvent{EventHitSingleError, ""}
+				l.Event = ExtendedEvent{Event: EventHitSingleError, Extra: ""}
 				eventStr = fmt.Sprintf("%s | Single, Error", eventStr)
 			} else {
-				l.Event = ExtendedEvent{EventHitSingle, ""}
+				l.Event = ExtendedEvent{Event: EventHitSingle, Extra: ""}
 				eventStr = fmt.Sprintf("%s | Single", eventStr)
 			}
 		case EventHitDoubleCF, EventHitDoubleLF, EventHitDoubleRF:
@@ -353,7 +336,7 @@ func (i *Inning) AtBat() {
 			}
 			eventStr = fmt.Sprintf("Defender: %s", positions[hitResult])
 			if out {
-				l.Event = ExtendedEvent{hitResult, ""}
+				l.Event = ExtendedEvent{Event: hitResult, Extra: ""}
 				p.Status = StatusOut
 				i.Outs++
 				break
@@ -363,10 +346,10 @@ func (i *Inning) AtBat() {
 				scored += len(runs)
 			}
 			if extra {
-				l.Event = ExtendedEvent{EventHitDoubleError, ""}
+				l.Event = ExtendedEvent{Event: EventHitDoubleError, Extra: ""}
 				eventStr = fmt.Sprintf("%s | Double, Error", eventStr)
 			} else {
-				l.Event = ExtendedEvent{EventHitDouble, ""}
+				l.Event = ExtendedEvent{Event: EventHitDouble, Extra: ""}
 				eventStr = fmt.Sprintf("%s | Double", eventStr)
 			}
 		case EventHitTripleCF, EventHitTripleRF:
@@ -376,7 +359,7 @@ func (i *Inning) AtBat() {
 			}
 			eventStr = fmt.Sprintf("Defender: %s", positions[hitResult])
 			if out {
-				l.Event = ExtendedEvent{hitResult, ""}
+				l.Event = ExtendedEvent{Event: hitResult, Extra: ""}
 				p.Status = StatusOut
 				i.Outs++
 				break
@@ -386,10 +369,10 @@ func (i *Inning) AtBat() {
 				scored += len(runs)
 			}
 			if extra {
-				l.Event = ExtendedEvent{EventHitTripleError, ""}
+				l.Event = ExtendedEvent{Event: EventHitTripleError, Extra: ""}
 				eventStr = fmt.Sprintf("%s | Triple, Error", eventStr)
 			} else {
-				l.Event = ExtendedEvent{EventHitTriple, ""}
+				l.Event = ExtendedEvent{Event: EventHitTriple, Extra: ""}
 				eventStr = fmt.Sprintf("%s | Triple", eventStr)
 			}
 		}
@@ -397,7 +380,7 @@ func (i *Inning) AtBat() {
 		i.Hits++
 	case EventWalk:
 		if runs := i.Diamond.Advance(p, 1); len(runs) > 0 {
-			l.Event = ExtendedEvent{EventLogWalk, ""} // TODO: Refactor events and rename this
+			l.Event = ExtendedEvent{Event: EventLogWalk, Extra: ""} // TODO: Refactor events and rename this
 			runners = append(runners, runs...)
 			scored += len(runs)
 		}
@@ -409,17 +392,17 @@ func (i *Inning) AtBat() {
 		if eventKey == EventProdOut {
 			if event, prunners := i.ProductiveOut(swing, outEvent); event.Event == EventHitProductiveOut {
 				runners = append(runners, prunners...)
-				outEvent = event.Event
+				outEvent = Event(event.GetLong())
 				l.Event = event
 			}
-			eventStr = fmt.Sprintf("%s | %s", eventStr, outEvent.Long())
+			eventStr = fmt.Sprintf("%s | %s", eventStr, outEvent)
 		} else if eventKey == EventPossibleDbl {
 			outEvent := i.PossibleDouble(swing, outEvent, p)
 			l.Event = outEvent
 
-			eventStr = fmt.Sprintf("%s | %s", eventStr, outEvent.Event.Long())
+			eventStr = fmt.Sprintf("%s | %s", eventStr, outEvent.GetLong())
 		} else {
-			eventStr = fmt.Sprintf("%s | %s", eventStr, outEvent.Long())
+			eventStr = fmt.Sprintf("%s | %s", eventStr, ExtendedEventMapping[outEvent].GetLong())
 		}
 	}
 
@@ -427,12 +410,8 @@ func (i *Inning) AtBat() {
 	// Send information and debug messages to the logger
 	log.Debug(eventOutput)
 
-	for _, base := range i.Diamond.Bases {
-		name := "empty"
-		if base.Player != nil {
-			name = base.Player.Name
-		}
-		log.Debugf("\t%s : %s\n", base.Name, name)
+	if Verbosity() == verboseDebug {
+		log.Debug(i.Diamond.String())
 	}
 
 	if scored > 0 {
@@ -451,6 +430,19 @@ var diamond *Diamond
 // Diamond holds the three bases
 type Diamond struct {
 	Bases [4]*Base
+}
+
+func (d *Diamond) String() string {
+	str := ""
+	for _, base := range d.Bases {
+		name := "empty"
+		if base.Player != nil {
+			name = base.Player.Name
+		}
+		str = fmt.Sprintf("%s\t%s : %s\n", str, base.Name, name)
+	}
+
+	return str
 }
 
 // Reset creates a new diamond with empty bases
@@ -586,4 +578,21 @@ func (b *Base) Load(p *Player) *Player {
 	}
 
 	return nil
+}
+
+func swingEvent(swing int, bt int) int {
+	var eventKey int
+	if swing >= 71 {
+		eventKey = EventPossibleDbl
+	} else if swing >= bt+6 {
+		eventKey = EventProdOut
+	} else if swing >= bt+1 {
+		eventKey = EventWalk
+	} else if swing >= 6 {
+		eventKey = EventHit
+	} else {
+		eventKey = EventCrit
+	}
+
+	return eventKey
 }

@@ -138,3 +138,162 @@ func TestDefense(t *testing.T) {
 		t.Run(label, tf)
 	}
 }
+
+func TestExtendedEvent_GetLong(t *testing.T) {
+	if expected, actual := "Strikeout", ExtendedEventMapping[EventOutK].GetLong(); expected != actual {
+		t.Fatalf("Fail: expected %s, got %s", expected, actual)
+	}
+
+	testEvent := ExtendedEvent{Event: "TEST"}
+	if expected, actual := "TEST", testEvent.GetLong(); expected != actual {
+		t.Fatalf("Fail: expected %s, got %s", expected, actual)
+	}
+
+	t.Log("Pass")
+}
+
+func TestHit(t *testing.T) {
+	tests := []struct {
+		swing          int
+		crit           bool
+		roll           int
+		expectedResult Event
+		expectedExtra  bool
+		expectedOut    bool
+	}{
+		{
+			roll:           19,
+			expectedResult: EventHitHomeRun,
+			expectedExtra:  false,
+			expectedOut:    false,
+		},
+		{
+			roll:           18,
+			crit:           true,
+			expectedResult: EventHitHomeRun,
+			expectedExtra:  false,
+			expectedOut:    false,
+		},
+		{
+			roll:           16,
+			expectedResult: EventHitDoubleAdv3,
+			expectedExtra:  false,
+			expectedOut:    false,
+		},
+		{
+			roll:           15,
+			crit:           true,
+			expectedResult: EventHitDoubleAdv3,
+			expectedExtra:  false,
+			expectedOut:    false,
+		},
+		{
+			roll:           8,
+			expectedResult: EventHitSingleAdv2,
+			expectedExtra:  false,
+			expectedOut:    false,
+		},
+		{
+			roll:           7,
+			crit:           true,
+			expectedResult: EventHitSingleAdv2,
+			expectedExtra:  false,
+			expectedOut:    false,
+		},
+		{
+			roll:           1,
+			expectedResult: EventHitSinglePlus,
+			expectedExtra:  false,
+			expectedOut:    false,
+		},
+	}
+	for i, tt := range tests {
+		label := fmt.Sprintf("Roll: %d - Crit: %t - Swing: %d", tt.roll, tt.crit, tt.swing)
+		tf := func(t *testing.T) {
+			t.Logf("Case %d - %s\n", i+1, label)
+			{
+				actualEvent, actualExtra, actualOut := hit(tt.swing, tt.crit, tt.roll)
+
+				if expected, actual := tt.expectedResult.Short(), actualEvent.Short(); expected != actual {
+					t.Fatalf("Fail: expected event %s, got %s", expected, actual)
+				}
+
+				if expected, actual := tt.expectedOut, actualOut; expected != actual {
+					t.Fatalf("Fail: expected out to be %t, got %t", expected, actual)
+				}
+
+				if expected, actual := tt.expectedExtra, actualExtra; expected != actual {
+					t.Fatalf("Fail: expected extra to be %t, got %t", expected, actual)
+				}
+
+				t.Log("Pass")
+			}
+		}
+
+		t.Run(label, tf)
+	}
+}
+
+func TestIsOutOutfield(t *testing.T) {
+	tests := []struct {
+		out        Event
+		isOutfield bool
+	}{
+		{
+			out:        EventOutG3,
+			isOutfield: false,
+		},
+		{
+			out:        EventOutF7,
+			isOutfield: true,
+		},
+	}
+
+	for i, tt := range tests {
+		label := tt.out.Short()
+		tf := func(t *testing.T) {
+			t.Logf("Case %d - %s\n", i+1, label)
+			{
+				if expected, actual := tt.isOutfield, IsOutOutfield(tt.out); expected != actual {
+					t.Fatalf("Fail: expected %t, got %t", expected, actual)
+				}
+
+				t.Log("Pass")
+			}
+		}
+
+		t.Run(label, tf)
+	}
+}
+
+func TestIsOutInfield(t *testing.T) {
+	tests := []struct {
+		out       Event
+		isInfield bool
+	}{
+		{
+			out:       EventOutG3,
+			isInfield: true,
+		},
+		{
+			out:       EventOutF7,
+			isInfield: false,
+		},
+	}
+
+	for i, tt := range tests {
+		label := tt.out.Short()
+		tf := func(t *testing.T) {
+			t.Logf("Case %d - %s\n", i+1, label)
+			{
+				if expected, actual := tt.isInfield, IsOutInfield(tt.out); expected != actual {
+					t.Fatalf("Fail: expected %t, got %t", expected, actual)
+				}
+
+				t.Log("Pass")
+			}
+		}
+
+		t.Run(label, tf)
+	}
+}
