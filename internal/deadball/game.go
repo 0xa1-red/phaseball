@@ -184,37 +184,37 @@ type InningLog struct {
 	Runs   uint8
 }
 
-func (i *Inning) ProductiveOut(swing int, outEvent Event) (ExtendedEvent, []*Player) {
+func (i *Inning) ProductiveOut(swing int, outEvent Event) (Event, []*Player) {
 	runners := make([]*Player, 0)
-	event := ExtendedEventMapping[outEvent]
+	event := outEvent
 	if swing < 70 && IsOutOutfield(outEvent) && i.Outs < 3 {
 		if p2 := i.Diamond.Bases[1].Player; p2 != nil {
 			if pp := i.Diamond.Bases[1].Load(nil); pp != nil {
 				runners = append(runners, pp)
 			}
-			event = ExtendedEvent{Event: EventHitProductiveOut, Extra: event.Extra}
+			event = Event{Label: EventHitProductiveOut.Label, Extra: event.Extra}
 		} else if i.Diamond.Bases[2].Player != nil {
 			if runner := i.Diamond.Bases[2].Load(nil); runner != nil {
 				runners = append(runners, runner)
 			}
-			event = ExtendedEvent{Event: EventHitProductiveOut, Extra: event.Extra}
+			event = Event{Label: EventHitProductiveOut.Label, Extra: event.Extra}
 		}
 	}
 
 	return event, runners
 }
 
-func (i *Inning) PossibleDouble(swing int, outEvent Event, p *Player) ExtendedEvent {
-	event := ExtendedEventMapping[outEvent]
+func (i *Inning) PossibleDouble(swing int, outEvent Event, p *Player) Event {
+	event := outEvent
 	digit := LastDigit(swing)
 	if i.Diamond.Bases[0].Player != nil && IsOutInfield(outEvent) && digit >= 3 && digit < 7 {
 		if swing >= 70 {
 			i.Diamond.Bases[0].Player = nil
-			event = ExtendedEvent{Event: EventHitDoublePlay, Extra: event.Extra}
+			event = Event{Label: EventHitDoublePlay.Label, Extra: event.Extra}
 			i.Outs++
 		} else {
 			i.Diamond.Bases[0].Player = p
-			event = ExtendedEvent{Event: EventHitFieldersChoice, Extra: event.Extra}
+			event = Event{Label: EventHitFieldersChoice.Label, Extra: event.Extra}
 		}
 	}
 
@@ -225,13 +225,6 @@ func (i *Inning) PossibleDouble(swing int, outEvent Event, p *Player) ExtendedEv
 func (i *Inning) AtBat() {
 	// Select the batter
 	p := i.Team.AtBat()
-	events := map[int]string{
-		EventCrit:        EventCritStr,
-		EventHit:         EventHitStr,
-		EventWalk:        EventWalkStr,
-		EventProdOut:     EventProdOutStr,
-		EventPossibleDbl: EventPossibleDblStr,
-	}
 
 	log.Debugf("Pitcher: %s | Batter: %s", i.Pitcher.Name, p.Name)
 
@@ -242,23 +235,19 @@ func (i *Inning) AtBat() {
 		Extra:   make(map[string]interface{}),
 	}
 
-	var eventKey int
-
 	_, pitchRoll := i.Pitcher.Pitch(p.Hand)
 
 	swing := dice.Roll(100, 1, 0) + pitchRoll
-	eventKey = swingEvent(swing, int(p.BatterTarget))
-
-	eventStr := events[eventKey]
+	event := swingEvent(swing, int(p.BatterTarget))
 
 	var scored int
 	runners := []*Player{}
-	switch eventKey {
+	switch event {
 	case EventProdOut, EventPossibleDbl:
 		p.Status = StatusOut
 		i.Outs++
 	case EventHit, EventCrit:
-		hitResult, extra, out := Hit(swing, eventKey == EventCrit)
+		hitResult, extra, out := Hit(swing, event == EventCrit)
 
 		if extra {
 			if runner := i.Diamond.Bases[0].Load(nil); runner != nil {
@@ -267,7 +256,7 @@ func (i *Inning) AtBat() {
 			}
 		}
 
-		l.Event = ExtendedEvent{Event: hitResult, Extra: ""}
+		l.Event = hitResult
 
 		switch hitResult {
 		case EventHitSinglePlus:
@@ -275,7 +264,6 @@ func (i *Inning) AtBat() {
 				runners = append(runners, runs...)
 				scored += len(runs)
 			}
-			eventStr = fmt.Sprintf("%s - Single", eventStr)
 		case EventHitSingleAdv2:
 			if runner := i.Diamond.Bases[0].Load(nil); runner != nil {
 				runners = append(runners, runner)
@@ -285,7 +273,6 @@ func (i *Inning) AtBat() {
 				runners = append(runners, runs...)
 				scored += len(runs)
 			}
-			eventStr = fmt.Sprintf("%s - Single, runners advence 2", eventStr)
 		case EventHitDoubleAdv3:
 			if i.Diamond.Bases[0].Load(nil) != nil {
 				scored++
@@ -297,21 +284,12 @@ func (i *Inning) AtBat() {
 				runners = append(runners, runs...)
 				scored += len(runs)
 			}
-			eventStr = fmt.Sprintf("%s - Double, runners advance 3", eventStr)
 		case EventHitHomeRun:
 			if runs := i.Diamond.HomeRun(p); len(runs) > 0 {
 				runners = append(runners, runs...)
 				scored += len(runs)
 			}
-			eventStr = fmt.Sprintf("%s - Home run!!!", eventStr)
 		case EventHitSingle1B, EventHitSingle2B, EventHitSingle3B, EventHitSingleSS:
-			positions := map[Event]string{
-				EventHitSingle1B: "first baseman",
-				EventHitSingle2B: "second baseman",
-				EventHitSingle3B: "third baseman",
-				EventHitSingleSS: "shortstop",
-			}
-			eventStr = fmt.Sprintf("Defender: %s", positions[hitResult])
 			if out {
 				p.Status = StatusOut
 				i.Outs++
@@ -322,21 +300,13 @@ func (i *Inning) AtBat() {
 				scored += len(runs)
 			}
 			if extra {
-				l.Event = ExtendedEvent{Event: EventHitSingleError, Extra: ""}
-				eventStr = fmt.Sprintf("%s | Single, Error", eventStr)
+				l.Event = EventHitSingleError
 			} else {
-				l.Event = ExtendedEvent{Event: EventHitSingle, Extra: ""}
-				eventStr = fmt.Sprintf("%s | Single", eventStr)
+				l.Event = EventHitSingle
 			}
 		case EventHitDoubleCF, EventHitDoubleLF, EventHitDoubleRF:
-			positions := map[Event]string{
-				EventHitDoubleCF: "center fielder",
-				EventHitDoubleLF: "left fielder",
-				EventHitDoubleRF: "right fielder",
-			}
-			eventStr = fmt.Sprintf("Defender: %s", positions[hitResult])
 			if out {
-				l.Event = ExtendedEvent{Event: hitResult, Extra: ""}
+				l.Event = hitResult
 				p.Status = StatusOut
 				i.Outs++
 				break
@@ -346,20 +316,13 @@ func (i *Inning) AtBat() {
 				scored += len(runs)
 			}
 			if extra {
-				l.Event = ExtendedEvent{Event: EventHitDoubleError, Extra: ""}
-				eventStr = fmt.Sprintf("%s | Double, Error", eventStr)
+				l.Event = EventHitDoubleError
 			} else {
-				l.Event = ExtendedEvent{Event: EventHitDouble, Extra: ""}
-				eventStr = fmt.Sprintf("%s | Double", eventStr)
+				l.Event = EventHitDouble
 			}
 		case EventHitTripleCF, EventHitTripleRF:
-			positions := map[Event]string{
-				EventHitTripleCF: "center fielder",
-				EventHitTripleRF: "right fielder",
-			}
-			eventStr = fmt.Sprintf("Defender: %s", positions[hitResult])
 			if out {
-				l.Event = ExtendedEvent{Event: hitResult, Extra: ""}
+				l.Event = hitResult
 				p.Status = StatusOut
 				i.Outs++
 				break
@@ -369,18 +332,16 @@ func (i *Inning) AtBat() {
 				scored += len(runs)
 			}
 			if extra {
-				l.Event = ExtendedEvent{Event: EventHitTripleError, Extra: ""}
-				eventStr = fmt.Sprintf("%s | Triple, Error", eventStr)
+				l.Event = EventHitTripleError
 			} else {
-				l.Event = ExtendedEvent{Event: EventHitTriple, Extra: ""}
-				eventStr = fmt.Sprintf("%s | Triple", eventStr)
+				l.Event = EventHitTriple
 			}
 		}
 
 		i.Hits++
 	case EventWalk:
 		if runs := i.Diamond.Advance(p, 1); len(runs) > 0 {
-			l.Event = ExtendedEvent{Event: EventLogWalk, Extra: ""} // TODO: Refactor events and rename this
+			l.Event = EventWalk // TODO: Refactor events and rename this
 			runners = append(runners, runs...)
 			scored += len(runs)
 		}
@@ -388,27 +349,17 @@ func (i *Inning) AtBat() {
 
 	if p.Status == StatusOut {
 		outEvent := Out(swing)
-		l.Event = ExtendedEventMapping[outEvent]
-		if eventKey == EventProdOut {
-			if event, prunners := i.ProductiveOut(swing, outEvent); event.Event == EventHitProductiveOut {
+		l.Event = outEvent
+		if event == EventProdOut {
+			if event, prunners := i.ProductiveOut(swing, outEvent); event == EventHitProductiveOut {
 				runners = append(runners, prunners...)
-				outEvent = Event(event.GetLong())
 				l.Event = event
 			}
-			eventStr = fmt.Sprintf("%s | %s", eventStr, outEvent)
-		} else if eventKey == EventPossibleDbl {
+		} else if event == EventPossibleDbl {
 			outEvent := i.PossibleDouble(swing, outEvent, p)
 			l.Event = outEvent
-
-			eventStr = fmt.Sprintf("%s | %s", eventStr, outEvent.GetLong())
-		} else {
-			eventStr = fmt.Sprintf("%s | %s", eventStr, ExtendedEventMapping[outEvent].GetLong())
 		}
 	}
-
-	eventOutput := fmt.Sprintf("At bat: %s ... %s", p.Name, eventStr)
-	// Send information and debug messages to the logger
-	log.Debug(eventOutput)
 
 	if Verbosity() == verboseDebug {
 		log.Debug(i.Diamond.String())
@@ -580,19 +531,19 @@ func (b *Base) Load(p *Player) *Player {
 	return nil
 }
 
-func swingEvent(swing int, bt int) int {
-	var eventKey int
+func swingEvent(swing int, bt int) Event {
+	var event Event
 	if swing >= 71 {
-		eventKey = EventPossibleDbl
+		event = EventPossibleDbl
 	} else if swing >= bt+6 {
-		eventKey = EventProdOut
+		event = EventProdOut
 	} else if swing >= bt+1 {
-		eventKey = EventWalk
+		event = EventWalk
 	} else if swing >= 6 {
-		eventKey = EventHit
+		event = EventHit
 	} else {
-		eventKey = EventCrit
+		event = EventCrit
 	}
 
-	return eventKey
+	return event
 }
