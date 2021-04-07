@@ -6,77 +6,64 @@ import (
 	"hq.0xa1.red/axdx/phaseball/internal/dice"
 )
 
-type ExtendedEvent struct {
-	Event Event
+type Event struct {
+	Label string
 	Long  string
 	Extra string
 }
 
-type Event string
+var (
+	EventHitSingle      Event = Event{Label: "SINGLE"}
+	EventHitSinglePlus  Event = Event{Label: "SINGLE+", Long: "Single - Extra"}
+	EventHitSingleError Event = Event{Label: "SINGLE_ERROR", Long: "Single - Error"}
+	EventHitSingleAdv2  Event = Event{Label: "SINGLE_ADV_2", Long: "Single - Runners advance two"}
+	EventHitSingle1B    Event = Event{Label: "SINGLE_DEF_1B"}
+	EventHitSingle2B    Event = Event{Label: "SINGLE_DEF_2B"}
+	EventHitSingle3B    Event = Event{Label: "SINGLE_DEF_3B"}
+	EventHitSingleSS    Event = Event{Label: "SINGLE_DEF_SS"}
 
-const (
-	EventLogWalk Event = "WALK"
+	EventHitDouble      Event = Event{Label: "DOUBLE"}
+	EventHitDoubleError Event = Event{Label: "DOUBLE_ERROR"}
+	EventHitDoubleAdv3  Event = Event{Label: "DOUBLE_ADV_3"}
+	EventHitDoubleLF    Event = Event{Label: "DOUBLE_DEF_LF"}
+	EventHitDoubleCF    Event = Event{Label: "DOUBLE_DEF_CF"}
+	EventHitDoubleRF    Event = Event{Label: "DOUBLE_DEF_RF"}
 
-	EventHitSinglePlus  Event = "SINGLE+"
-	EventHitSingleAdv2  Event = "SINGLE_ADV_2"
-	EventHitSingle1B    Event = "SINGLE_DEF_1B"
-	EventHitSingle2B    Event = "SINGLE_DEF_2B"
-	EventHitSingle3B    Event = "SINGLE_DEF_3B"
-	EventHitSingleSS    Event = "SINGLE_DEF_SS"
-	EventHitSingleError Event = "SINGLE_ERROR"
-	EventHitSingle      Event = "SINGLE"
+	EventHitTriple      Event = Event{Label: "TRIPLE"}
+	EventHitTripleError Event = Event{Label: "TRIPLE_ERROR"}
+	EventHitTripleRF    Event = Event{Label: "TRIPLE_DEF_RF"}
+	EventHitTripleCF    Event = Event{Label: "TRIPLE_DEF_CF"}
 
-	EventHitDoubleAdv3  Event = "DOUBLE_ADV_3"
-	EventHitDoubleLF    Event = "DOUBLE_DEF_LF"
-	EventHitDoubleCF    Event = "DOUBLE_DEF_CF"
-	EventHitDoubleRF    Event = "DOUBLE_DEF_RF"
-	EventHitDoubleError Event = "DOUBLE_ERROR"
-	EventHitDouble      Event = "DOUBLE"
+	EventHitHomeRun Event = Event{Label: "HOME_RUN", Long: "Home run", Extra: ""}
 
-	EventHitTripleRF    Event = "TRIPLE_DEF_RF"
-	EventHitTripleCF    Event = "TRIPLE_DEF_CF"
-	EventHitTripleError Event = "TRIPLE_ERROR"
-	EventHitTriple      Event = "TRIPLE"
+	EventHitProductiveOut  Event = Event{Label: "PRODUCTIVE_OUT", Long: "", Extra: ""}
+	EventHitDoublePlay     Event = Event{Label: "DOUBLE_PLAY", Long: "", Extra: ""}
+	EventHitFieldersChoice Event = Event{Label: "FIELDERS_CHOICE", Long: "", Extra: ""}
 
-	EventHitHomeRun Event = "HOME_RUN"
-	EventHitOut     Event = "OUT"
+	EventWalk        Event = Event{Label: "WALK", Long: "Walk", Extra: ""}
+	EventOut         Event = Event{Label: "OUT", Long: "Out", Extra: ""}
+	EventCrit        Event = Event{Label: "CRITICAL_HIT", Long: "Critical hit", Extra: ""}
+	EventError       Event = Event{Label: "ERROR", Long: "Error", Extra: ""}
+	EventHit         Event = Event{Label: "HIT", Long: "Hit", Extra: ""}
+	EventProdOut     Event = Event{Label: "PRODUCTIVE_OUT", Long: "", Extra: ""}
+	EventPossibleDbl Event = Event{Label: "POSSIBLE_DOUBLE", Long: "", Extra: ""}
 
-	EventHitProductiveOut  Event = "PRODUCTIVE_OUT"
-	EventHitDoublePlay     Event = "DOUBLE_PLAY"
-	EventHitFieldersChoice Event = "FIELDERS_CHOICE"
-
-	EventOutK  Event = "K"
-	EventOutG3 Event = "G-3"
-	EventOut43 Event = "4-3"
-	EventOut53 Event = "5-3"
-	EventOut63 Event = "6-3"
-	EventOutF7 Event = "F-7"
-	EventOutF8 Event = "F-8"
-	EventOutF9 Event = "F-9"
+	EventOutK  Event = Event{Label: EventOut.Label, Long: "Strikeout", Extra: "K"}
+	EventOutG3 Event = Event{Label: EventOut.Label, Long: "Groundout to first", Extra: "G-3"}
+	EventOut43 Event = Event{Label: EventOut.Label, Long: "Groundout to second", Extra: "4-3"}
+	EventOut53 Event = Event{Label: EventOut.Label, Long: "Groundout to third", Extra: "5-3"}
+	EventOut63 Event = Event{Label: EventOut.Label, Long: "Groundout to short", Extra: "6-3"}
+	EventOutF7 Event = Event{Label: EventOut.Label, Long: "Flyout to left field", Extra: "F-7"}
+	EventOutF8 Event = Event{Label: EventOut.Label, Long: "Flyout to center field", Extra: "F-8"}
+	EventOutF9 Event = Event{Label: EventOut.Label, Long: "Flyout to right field", Extra: "F-9"}
 )
 
-var ExtendedEventMapping = map[Event]ExtendedEvent{
-	EventHitHomeRun: {Event: EventHitHomeRun, Long: "Home run", Extra: ""},
-	EventOutK:       {Event: EventHitOut, Long: "Strikeout", Extra: "K"},
-	EventOutG3:      {Event: EventHitOut, Long: "Groundout to first", Extra: "G-3"},
-	EventOut43:      {Event: EventHitOut, Long: "Groundout to second", Extra: "4-3"},
-	EventOut53:      {Event: EventHitOut, Long: "Groundout to third", Extra: "5-3"},
-	EventOut63:      {Event: EventHitOut, Long: "Groundout to short", Extra: "6-3"},
-	EventOutF7:      {Event: EventHitOut, Long: "Flyout to left field", Extra: "F-7"},
-	EventOutF8:      {Event: EventHitOut, Long: "Flyout to center field", Extra: "F-8"},
-	EventOutF9:      {Event: EventHitOut, Long: "Flyout to right field", Extra: "F-9"},
-}
-
-func (e ExtendedEvent) GetLong() string {
+func (e Event) GetLong() string {
 	if e.Long != "" {
 		return e.Long
 	}
 
-	return string(e.Event)
-}
-
-func (e Event) Short() string {
-	return string(e)
+	return string(e.Label)
 }
 
 func Hit(swing int, crit bool) (result Event, extra bool, out bool) {
@@ -182,7 +169,7 @@ func Out(swing int) Event {
 		return res
 	}
 
-	return ""
+	return Event{}
 }
 
 func IsOutInfield(e Event) bool {

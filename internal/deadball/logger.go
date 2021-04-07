@@ -56,7 +56,7 @@ type LogEntry struct {
 	Inning  *InningLog
 	Batter  *Player
 	Pitcher *Player
-	Event   ExtendedEvent
+	Event   Event
 	Runs    int
 	Extra   map[string]interface{}
 }

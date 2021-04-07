@@ -64,28 +64,28 @@ func TestInning_PossibleDouble(t *testing.T) {
 		outs          uint8
 		label         string
 		swing         int
-		expectedEvent ExtendedEvent
+		expectedEvent Event
 		expectedOuts  uint8
 	}{
 		{
 			outs:          1,
 			label:         "double play",
 			swing:         75,
-			expectedEvent: ExtendedEvent{Event: EventHitDoublePlay, Extra: "4-3"},
+			expectedEvent: Event{Label: EventHitDoublePlay.Label, Extra: "4-3"},
 			expectedOuts:  2,
 		},
 		{
 			outs:          1,
 			label:         "fielders choice",
 			swing:         66,
-			expectedEvent: ExtendedEvent{Event: EventHitFieldersChoice, Extra: "4-3"},
+			expectedEvent: Event{Label: EventHitFieldersChoice.Label, Extra: "4-3"},
 			expectedOuts:  1,
 		},
 		{
 			outs:          1,
-			label:         strings.ToLower(ExtendedEventMapping[EventOut43].GetLong()),
+			label:         strings.ToLower(EventOut43.Long),
 			swing:         51,
-			expectedEvent: ExtendedEvent{Event: EventHitOut, Extra: "4-3"},
+			expectedEvent: Event{Label: EventOut.Label, Extra: "4-3"},
 			expectedOuts:  1,
 		},
 	}
@@ -102,7 +102,7 @@ func TestInning_PossibleDouble(t *testing.T) {
 
 				actualEvent := i.PossibleDouble(tt.swing, EventOut43, team.Players[1])
 
-				if expected, actual := tt.expectedEvent.Event, actualEvent.Event; expected != actual {
+				if expected, actual := tt.expectedEvent.Label, actualEvent.Label; expected != actual {
 					t.Fatalf("Fail: expected event to be %s, got %s", expected, actual)
 				}
 
@@ -129,7 +129,7 @@ func TestInning_ProductiveOut(t *testing.T) {
 		p2            *Player
 		p3            *Player
 		expectedRuns  []*Player
-		expectedEvent ExtendedEvent
+		expectedEvent Event
 	}{
 		{
 			label:         "no bases",
@@ -137,7 +137,7 @@ func TestInning_ProductiveOut(t *testing.T) {
 			p2:            nil,
 			p3:            nil,
 			expectedRuns:  make([]*Player, 0),
-			expectedEvent: ExtendedEvent{Event: EventHitOut, Extra: "F-7"},
+			expectedEvent: EventOutF7,
 		},
 		{
 			label:         "second base",
@@ -145,7 +145,7 @@ func TestInning_ProductiveOut(t *testing.T) {
 			p2:            team.Players[0],
 			p3:            nil,
 			expectedRuns:  make([]*Player, 0),
-			expectedEvent: ExtendedEvent{Event: EventHitProductiveOut, Extra: "F-7"},
+			expectedEvent: Event{Label: EventHitProductiveOut.Label, Extra: "F-7"},
 		},
 		{
 			label:         "second and third base",
@@ -153,7 +153,7 @@ func TestInning_ProductiveOut(t *testing.T) {
 			p2:            team.Players[1],
 			p3:            team.Players[0],
 			expectedRuns:  []*Player{team.Players[0]},
-			expectedEvent: ExtendedEvent{Event: EventHitProductiveOut, Extra: "F-7"},
+			expectedEvent: Event{Label: EventHitProductiveOut.Label, Extra: "F-7"},
 		},
 		{
 			label:         "third base",
@@ -161,7 +161,7 @@ func TestInning_ProductiveOut(t *testing.T) {
 			p2:            nil,
 			p3:            team.Players[0],
 			expectedRuns:  []*Player{team.Players[0]},
-			expectedEvent: ExtendedEvent{Event: EventHitProductiveOut, Extra: "F-7"},
+			expectedEvent: Event{Label: EventHitProductiveOut.Label, Extra: "F-7"},
 		},
 	}
 
@@ -178,7 +178,7 @@ func TestInning_ProductiveOut(t *testing.T) {
 
 				actualEvent, actualRunners := i.ProductiveOut(60, tt.outEvent)
 
-				if expected, actual := tt.expectedEvent.Event, actualEvent.Event; expected != actual {
+				if expected, actual := tt.expectedEvent.Label, actualEvent.Label; expected != actual {
 					t.Fatalf("Fail: expected event to be %s, got %s", expected, actual)
 				}
 
@@ -448,33 +448,33 @@ func TestOneSingleAndTriple(t *testing.T) {
 
 func TestSwingEvent(t *testing.T) {
 	tests := []struct {
-		swing            int
-		bt               int
-		expectedEventKey int
+		swing         int
+		bt            int
+		expectedEvent Event
 	}{
 		{
-			swing:            71,
-			expectedEventKey: EventPossibleDbl,
+			swing:         71,
+			expectedEvent: EventPossibleDbl,
 		},
 		{
-			swing:            60,
-			bt:               50,
-			expectedEventKey: EventProdOut,
+			swing:         60,
+			bt:            50,
+			expectedEvent: EventProdOut,
 		},
 		{
-			swing:            52,
-			bt:               50,
-			expectedEventKey: EventWalk,
+			swing:         52,
+			bt:            50,
+			expectedEvent: EventWalk,
 		},
 		{
-			swing:            10,
-			bt:               10,
-			expectedEventKey: EventHit,
+			swing:         10,
+			bt:            10,
+			expectedEvent: EventHit,
 		},
 		{
-			swing:            1,
-			bt:               10,
-			expectedEventKey: EventCrit,
+			swing:         1,
+			bt:            10,
+			expectedEvent: EventCrit,
 		},
 	}
 
@@ -483,8 +483,8 @@ func TestSwingEvent(t *testing.T) {
 		tf := func(t *testing.T) {
 			t.Log(label)
 
-			if expected, actual := tt.expectedEventKey, swingEvent(tt.swing, tt.bt); expected != actual {
-				t.Fatalf("Fail: expected %d, got %d", expected, actual)
+			if expected, actual := tt.expectedEvent, swingEvent(tt.swing, tt.bt); expected != actual {
+				t.Fatalf("Fail: expected %s, got %s", expected, actual)
 			}
 
 			t.Log("Pass")

@@ -113,13 +113,13 @@ func TestDefense(t *testing.T) {
 	}
 
 	for i, tt := range tests {
-		label := fmt.Sprintf("Roll: %d - Event: %s", tt.roll, tt.hit.Short())
+		label := fmt.Sprintf("Roll: %d - Event: %s", tt.roll, tt.hit)
 		tf := func(t *testing.T) {
 			t.Logf("Case %d - %s\n", i+1, label)
 			{
 				actualEvent, actualOut, actualExtra := defense(tt.hit, tt.roll)
 
-				if expected, actual := tt.expectedEvent.Short(), actualEvent.Short(); expected != actual {
+				if expected, actual := tt.expectedEvent, actualEvent; expected != actual {
 					t.Fatalf("Fail: expected event %s, got %s", expected, actual)
 				}
 
@@ -140,11 +140,11 @@ func TestDefense(t *testing.T) {
 }
 
 func TestExtendedEvent_GetLong(t *testing.T) {
-	if expected, actual := "Strikeout", ExtendedEventMapping[EventOutK].GetLong(); expected != actual {
+	if expected, actual := "Strikeout", EventOutK.Long; expected != actual {
 		t.Fatalf("Fail: expected %s, got %s", expected, actual)
 	}
 
-	testEvent := ExtendedEvent{Event: "TEST"}
+	testEvent := Event{Label: "TEST"}
 	if expected, actual := "TEST", testEvent.GetLong(); expected != actual {
 		t.Fatalf("Fail: expected %s, got %s", expected, actual)
 	}
@@ -214,7 +214,7 @@ func TestHit(t *testing.T) {
 			{
 				actualEvent, actualExtra, actualOut := hit(tt.swing, tt.crit, tt.roll)
 
-				if expected, actual := tt.expectedResult.Short(), actualEvent.Short(); expected != actual {
+				if expected, actual := tt.expectedResult, actualEvent; expected != actual {
 					t.Fatalf("Fail: expected event %s, got %s", expected, actual)
 				}
 
@@ -250,7 +250,7 @@ func TestIsOutOutfield(t *testing.T) {
 	}
 
 	for i, tt := range tests {
-		label := tt.out.Short()
+		label := tt.out.Label
 		tf := func(t *testing.T) {
 			t.Logf("Case %d - %s\n", i+1, label)
 			{
@@ -282,7 +282,7 @@ func TestIsOutInfield(t *testing.T) {
 	}
 
 	for i, tt := range tests {
-		label := tt.out.Short()
+		label := tt.out.Label
 		tf := func(t *testing.T) {
 			t.Logf("Case %d - %s\n", i+1, label)
 			{

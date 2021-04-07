@@ -1,14 +1,5 @@
 package deadball
 
-// Event types
-const (
-	EventCrit int = iota
-	EventHit
-	EventWalk
-	EventProdOut
-	EventPossibleDbl
-)
-
 // Event type strings
 const (
 	EventOutStr         string = "Out"
