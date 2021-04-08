@@ -2,7 +2,6 @@ package deadball
 
 import (
 	"fmt"
-	"strings"
 
 	"hq.0xa1.red/axdx/phaseball/internal/dice"
 )
@@ -18,7 +17,18 @@ TODO: The game should end if the team playing the bottom inning in the last roun
 type Game struct {
 	Turns []*Turn
 	Teams map[string]*Team
-	Log   GameLog
+	Log   *GameLog
+}
+
+func (g *Game) NewInning(num uint8, half string) *Inning {
+	switch half {
+	case HalfTop:
+		return NewInning(g.Teams[TeamAway], g.Teams[TeamHome].Pitcher(), g.Log, num, half)
+	case HalfBottom:
+		return NewInning(g.Teams[TeamHome], g.Teams[TeamAway].Pitcher(), g.Log, num, half)
+	}
+
+	return &Inning{}
 }
 
 func NewGame(away, home Team) *Game {
@@ -45,11 +55,12 @@ func (g *Game) Score() map[string]uint8 {
 
 // Run simulates the game from start to finish
 func (g *Game) Run() {
+	g.Log = NewGameLog(g.Teams[TeamAway], g.Teams[TeamHome])
 	for i := 0; i < 9; i++ {
 		log.Debugf("Inning %d\n", i+1)
 		turn := &Turn{
-			Top:    NewInning(g.Teams[TeamAway], g.Teams[TeamHome].Pitcher(), uint8(i+1), HalfTop),
-			Bottom: NewInning(g.Teams[TeamHome], g.Teams[TeamAway].Pitcher(), uint8(i+1), HalfBottom),
+			Top:    g.NewInning(uint8(i+1), HalfTop),
+			Bottom: g.NewInning(uint8(i+1), HalfBottom),
 		}
 
 		log.Debugf("Inning %d - TOP - %s\n", i+1, g.Teams[TeamAway].Name)
@@ -69,8 +80,8 @@ func (g *Game) Run() {
 		for awayRuns == homeRuns {
 			log.Debugf("Inning %d\n", i+1)
 			turn := &Turn{
-				Top:    NewInning(g.Teams[TeamAway], g.Teams[TeamHome].Pitcher(), uint8(i+1), HalfTop),
-				Bottom: NewInning(g.Teams[TeamHome], g.Teams[TeamAway].Pitcher(), uint8(i+1), HalfBottom),
+				Top:    g.NewInning(uint8(i+1), HalfTop),
+				Bottom: g.NewInning(uint8(i+1), HalfBottom),
 			}
 
 			log.Debugf("Inning %d - TOP - %s\n", i+1, g.Teams[TeamAway].Name)
@@ -86,41 +97,6 @@ func (g *Game) Run() {
 			i++
 		}
 	}
-
-	header := fmt.Sprintf("%-30s |", "Team name")
-	separator := fmt.Sprintf("%s+", strings.Repeat("-", 31))
-	awayBoard := fmt.Sprintf("%-30s |", g.Teams[TeamAway].Name)
-	homeBoard := fmt.Sprintf("%-30s |", g.Teams[TeamHome].Name)
-
-	var awayHits uint8 = 0
-	var homeHits uint8 = 0
-
-	for i, turn := range g.Turns {
-		awayHits += turn.Top.Hits
-		homeHits += turn.Bottom.Hits
-
-		header = fmt.Sprintf("%s %4d |", header, i+1)
-		separator = fmt.Sprintf("%s%s+", separator, strings.Repeat("-", 6))
-		awayBoard = fmt.Sprintf("%s %4d |", awayBoard, turn.Top.Runs)
-		homeBoard = fmt.Sprintf("%s %4d |", homeBoard, turn.Bottom.Runs)
-	}
-
-	header = fmt.Sprintf("%s| %4s | ", header, "H")
-	header = fmt.Sprintf("%s %4s | ", header, "R")
-	separator = fmt.Sprintf("%s+%s+%s+", separator, strings.Repeat("-", 6), strings.Repeat("-", 7))
-
-	awayBoard = fmt.Sprintf("%s| %4d | ", awayBoard, awayHits)
-	awayBoard = fmt.Sprintf("%s %4d | ", awayBoard, awayRuns)
-
-	homeBoard = fmt.Sprintf("%s| %4d | ", homeBoard, homeHits)
-	homeBoard = fmt.Sprintf("%s %4d | ", homeBoard, homeRuns)
-
-	fmt.Println(header)
-	fmt.Println(separator)
-	fmt.Println(awayBoard)
-	fmt.Println(homeBoard)
-
-	g.Log = gameLog
 }
 
 // Turn in lack of a better term represents a top and a bottom inning
@@ -136,18 +112,20 @@ type Inning struct {
 	Hits    uint8
 	Runs    uint8
 	Half    string
+	Logger  *GameLog
 	Team    *Team
 	Pitcher *Player
 	Diamond *Diamond
 }
 
 // NewInning creates a new inning for a team
-func NewInning(team *Team, pitcher *Player, num uint8, half string) *Inning {
+func NewInning(team *Team, pitcher *Player, log *GameLog, num uint8, half string) *Inning {
 	inning := Inning{
 		Team:    team,
 		Pitcher: pitcher,
 		Number:  num,
 		Half:    half,
+		Logger:  log,
 		Diamond: GetDiamond(),
 	}
 
@@ -174,12 +152,14 @@ func (i *Inning) ToLog() *InningLog {
 		Half:   i.Half,
 		Outs:   i.Outs,
 		Runs:   i.Runs,
+		Hits:   i.Hits,
 	}
 }
 
 type InningLog struct {
 	Number uint8
 	Half   string
+	Hits   uint8
 	Outs   uint8
 	Runs   uint8
 }
@@ -225,8 +205,6 @@ func (i *Inning) PossibleDouble(swing int, outEvent Event, p *Player) Event {
 func (i *Inning) AtBat() {
 	// Select the batter
 	p := i.Team.AtBat()
-
-	log.Debugf("Pitcher: %s | Batter: %s", i.Pitcher.Name, p.Name)
 
 	l := LogEntry{
 		Inning:  i.ToLog(),
@@ -289,6 +267,7 @@ func (i *Inning) AtBat() {
 				runners = append(runners, runs...)
 				scored += len(runs)
 			}
+			i.Team.Next()
 		case EventHitSingle1B, EventHitSingle2B, EventHitSingle3B, EventHitSingleSS:
 			if out {
 				p.Status = StatusOut
@@ -340,8 +319,8 @@ func (i *Inning) AtBat() {
 
 		i.Hits++
 	case EventWalk:
+		l.Event = EventWalk // TODO: Refactor events and rename this
 		if runs := i.Diamond.Advance(p, 1); len(runs) > 0 {
-			l.Event = EventWalk // TODO: Refactor events and rename this
 			runners = append(runners, runs...)
 			scored += len(runs)
 		}
@@ -355,7 +334,7 @@ func (i *Inning) AtBat() {
 				runners = append(runners, prunners...)
 				l.Event = event
 			}
-		} else if event == EventPossibleDbl {
+		} else if event == EventPossibleDbl && i.Outs < 2 {
 			outEvent := i.PossibleDouble(swing, outEvent, p)
 			l.Event = outEvent
 		}
@@ -365,14 +344,36 @@ func (i *Inning) AtBat() {
 		log.Debug(i.Diamond.String())
 	}
 
-	if scored > 0 {
+	if len(runners) > 0 {
 		l.Extra["runners"] = runners
 		l.Runs = int(scored)
 		i.Runs = i.Runs + uint8(scored)
 		log.Debugf("\t\tRBI: %d\n", scored)
 	}
 
-	gameLog = append(gameLog, l)
+	bases := struct {
+		First  string
+		Second string
+		Third  string
+		Home   string
+	}{}
+	for _, base := range i.Diamond.Bases {
+		if base.Player != nil {
+			switch base.Name {
+			case BaseFirst:
+				bases.First = base.Player.Name
+			case BaseSecond:
+				bases.Second = base.Player.Name
+			case BaseThird:
+				bases.Third = base.Player.Name
+			case BaseHome:
+				bases.Home = base.Player.Name
+			}
+		}
+	}
+	l.Bases = bases
+
+	i.Logger.Append(l)
 }
 
 // diamond is a singleton holding the current state of the pitch
