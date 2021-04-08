@@ -1,0 +1,61 @@
+header {
+    text-align: center;
+    padding: 20px 0;
+}
+body {
+    background: #FFFFFF;
+    color: #222222;
+}
+img {
+    width: 60%;
+    text-align: center;
+    margin: 0 auto;
+}
+h2, h3 {
+    font-family: 'Open Sans', sans-serif;
+}
+p {
+    line-height: 1.5em;
+}
+p, ul, td {
+    font-family: 'Noto Serif JP', serif;
+}
+
+ul {
+    list-style: none;
+    padding: 0;
+    margin: 0 50px;
+}
+
+table {
+    width: 300px;
+    margin: 0 50px;
+}
+
+tr.head td {
+    font-weight: bold;
+}
+
+td {
+    text-align: center;
+}
+
+td.roll {
+    width: 100px;
+}
+
+li::before {
+    content: "+ ";
+    font-weight: bold;
+}
+
+section.body {
+    width: 60%;
+    margin: 0 auto;
+}
+
+footer {
+    margin: 100px 0 20px;
+    text-align: center;
+    font-family: 'Noto Serif JP', serif;
+}
