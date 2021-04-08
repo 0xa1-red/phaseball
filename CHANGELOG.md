@@ -2,6 +2,17 @@
 
 <!--- next entry here -->
 
+## 0.2.0
+2021-04-08
+
+### Features
+
+- grpc match service (92e8097372ed97ecf90cc7256f43d3a0d54875b3)
+
+### Fixes
+
+- simplify event system (98dd75d8682e09e9e143c2ad176e49d99cc2ae49)
+
 ## 0.1.1
 2021-04-05
 
