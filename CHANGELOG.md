@@ -2,6 +2,13 @@
 
 <!--- next entry here -->
 
+## 0.3.0
+2021-04-08
+
+### Features
+
+- playtesting website (e3fe3346c718d6720bbbba656ae3d43f4e132401)
+
 ## 0.2.0
 2021-04-08
 
