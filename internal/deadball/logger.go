@@ -3,6 +3,7 @@ package deadball
 import (
 	"encoding/json"
 	"os"
+	"time"
 
 	"github.com/op/go-logging"
 	"hq.0xa1.red/axdx/phaseball/internal/logger"
@@ -40,11 +41,27 @@ func getLogger() *logging.Logger {
 	return log
 }
 
-var gameLog GameLog
+type GameLog struct {
+	PlayedAt time.Time
+	Away     *Team
+	Home     *Team
+	Entries  []LogEntry
+}
 
-type GameLog []LogEntry
+func NewGameLog(away, home *Team) *GameLog {
+	return &GameLog{
+		PlayedAt: time.Now(),
+		Away:     away,
+		Home:     home,
+		Entries:  make([]LogEntry, 0),
+	}
+}
 
-func (g GameLog) String() string {
+func (g *GameLog) Append(l LogEntry) {
+	g.Entries = append(g.Entries, l)
+}
+
+func (g *GameLog) String() string {
 	if j, err := json.MarshalIndent(g, "", "    "); err != nil {
 		return ""
 	} else {
@@ -59,6 +76,12 @@ type LogEntry struct {
 	Event   Event
 	Runs    int
 	Extra   map[string]interface{}
+	Bases   struct {
+		First  string
+		Second string
+		Third  string
+		Home   string
+	}
 }
 
 func (e LogEntry) JSON() (string, error) {

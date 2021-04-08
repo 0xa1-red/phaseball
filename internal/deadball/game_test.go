@@ -96,7 +96,7 @@ func TestInning_PossibleDouble(t *testing.T) {
 			{
 				GetDiamond().Reset()
 				team.NewTurn(true)
-				i := NewInning(&team, &Player{Name: "Peter Test"}, 1, HalfTop)
+				i := NewInning(&team, &Player{Name: "Peter Test"}, &GameLog{}, 1, HalfTop)
 				i.Outs = tt.outs
 				i.Diamond.Bases[0].Player = team.Players[0]
 
@@ -171,7 +171,7 @@ func TestInning_ProductiveOut(t *testing.T) {
 			{
 				GetDiamond().Reset()
 				team.NewTurn(true)
-				i := NewInning(&team, &Player{Name: "Peter Test"}, 1, HalfTop)
+				i := NewInning(&team, &Player{Name: "Peter Test"}, &GameLog{}, 1, HalfTop)
 				i.Outs = 1
 				i.Diamond.Bases[1].Player = tt.p2
 				i.Diamond.Bases[2].Player = tt.p3

@@ -29,7 +29,7 @@ var (
 type Team struct {
 	Name    string
 	Players [9]*Player
-	Index   int
+	Index   int `json:"-"`
 }
 
 // NewTurn resets the players' status in a team
