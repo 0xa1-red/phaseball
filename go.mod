@@ -1,4 +1,4 @@
-module hq.0xa1.red/axdx/phaseball
+module github.com/0xa1-red/phaseball
 
 go 1.16
 

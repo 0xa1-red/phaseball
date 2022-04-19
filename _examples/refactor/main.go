@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 
-	"hq.0xa1.red/axdx/phaseball/internal/deadball"
+	"github.com/0xa1-red/phaseball/internal/deadball"
 )
 
 func main() {

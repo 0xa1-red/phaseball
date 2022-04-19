@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 
-	"hq.0xa1.red/axdx/phaseball/internal/deadball"
+	"github.com/0xa1-red/phaseball/internal/deadball"
 )
 
 var file string
@@ -34,10 +34,7 @@ func main() {
 			fmt.Printf("Inning %d - %s; Pitcher: %s\n", entry.Inning.Number, half, entry.Pitcher.Name)
 		}
 
-		event := entry.Event.Long
-		if event == "" {
-			event = string(entry.Event.Event)
-		}
+		event := entry.Event.GetLong()
 		if entry.Event.Extra != "" {
 			event = fmt.Sprintf("%s %s", event, entry.Event.Extra)
 		}

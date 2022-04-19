@@ -3,7 +3,7 @@ package deadball
 import (
 	"fmt"
 
-	"hq.0xa1.red/axdx/phaseball/internal/dice"
+	"github.com/0xa1-red/phaseball/internal/dice"
 )
 
 /**
@@ -31,7 +31,7 @@ func (g *Game) NewInning(num uint8, half string) *Inning {
 	return &Inning{}
 }
 
-func NewGame(away, home Team) *Game {
+func New(away, home Team) *Game {
 	return &Game{
 		Turns: make([]*Turn, 0),
 		Teams: map[string]*Team{
@@ -65,9 +65,11 @@ func (g *Game) Run() {
 
 		log.Debugf("Inning %d - TOP - %s\n", i+1, g.Teams[TeamAway].Name)
 		turn.Top.Run()
+		g.Log.AddInning(i+1, TeamAway, turn.Top.Hits, turn.Top.Runs)
 
 		log.Debugf("Inning %d - BOTTOM - %s\n", i+1, g.Teams[TeamHome].Name)
 		turn.Bottom.Run()
+		g.Log.AddInning(i+1, TeamHome, turn.Bottom.Hits, turn.Bottom.Runs)
 		g.Turns = append(g.Turns, turn)
 	}
 
@@ -86,10 +88,12 @@ func (g *Game) Run() {
 
 			log.Debugf("Inning %d - TOP - %s\n", i+1, g.Teams[TeamAway].Name)
 			turn.Top.Run()
+			g.Log.AddInning(i+1, TeamAway, turn.Top.Hits, turn.Top.Runs)
 
 			log.Debugf("Inning %d - BOTTOM - %s\n", i+1, g.Teams[TeamHome].Name)
 			turn.Bottom.Run()
 			g.Turns = append(g.Turns, turn)
+			g.Log.AddInning(i+1, TeamHome, turn.Bottom.Hits, turn.Bottom.Runs)
 
 			runs := g.Score()
 			awayRuns = runs[TeamAway]
@@ -97,6 +101,7 @@ func (g *Game) Run() {
 			i++
 		}
 	}
+
 }
 
 // Turn in lack of a better term represents a top and a bottom inning
@@ -530,21 +535,4 @@ func (b *Base) Load(p *Player) *Player {
 	}
 
 	return nil
-}
-
-func swingEvent(swing int, bt int) Event {
-	var event Event
-	if swing >= 71 {
-		event = EventPossibleDbl
-	} else if swing >= bt+6 {
-		event = EventProdOut
-	} else if swing >= bt+1 {
-		event = EventWalk
-	} else if swing >= 6 {
-		event = EventHit
-	} else {
-		event = EventCrit
-	}
-
-	return event
 }

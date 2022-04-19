@@ -5,7 +5,7 @@ import (
 	"os"
 	"os/signal"
 
-	"hq.0xa1.red/axdx/phaseball/internal/service"
+	"github.com/0xa1-red/phaseball/internal/service"
 )
 
 func main() {
