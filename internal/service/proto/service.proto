@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-option go_package = "hq.0xa1.red/axdx/phaseball/internal/service";
+option go_package = "github.com/0xa1-red/phaseball/internal/service";
 
 message TeamSheet {
     string Name = 1;

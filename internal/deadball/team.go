@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"hq.0xa1.red/axdx/phaseball/internal/dice"
+	"github.com/0xa1-red/phaseball/internal/dice"
 )
 
 const (

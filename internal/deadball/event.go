@@ -3,7 +3,7 @@ package deadball
 import (
 	"fmt"
 
-	"hq.0xa1.red/axdx/phaseball/internal/dice"
+	"github.com/0xa1-red/phaseball/internal/dice"
 )
 
 type Event struct {
@@ -191,4 +191,21 @@ func IsOutOutfield(e Event) bool {
 	}
 
 	return false
+}
+
+func swingEvent(swing int, bt int) Event {
+	var event Event
+	if swing >= 71 {
+		event = EventPossibleDbl
+	} else if swing >= bt+6 {
+		event = EventProdOut
+	} else if swing >= bt+1 {
+		event = EventWalk
+	} else if swing >= 6 {
+		event = EventHit
+	} else {
+		event = EventCrit
+	}
+
+	return event
 }

@@ -6,8 +6,8 @@ import (
 	"log"
 	"net"
 
+	"github.com/0xa1-red/phaseball/internal/deadball"
 	grpc "google.golang.org/grpc"
-	"hq.0xa1.red/axdx/phaseball/internal/deadball"
 )
 
 var port = ":5051"
@@ -38,7 +38,7 @@ func (s *Simulator) SimulateGame(ctx context.Context, g *GameRequest) (*MatchRes
 		Players: homePlayers,
 	}
 
-	game := deadball.NewGame(away, home)
+	game := deadball.New(away, home)
 	game.Run()
 
 	return &MatchResults{

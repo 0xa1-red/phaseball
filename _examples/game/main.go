@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"hq.0xa1.red/axdx/phaseball/internal/deadball"
+	"github.com/0xa1-red/phaseball/internal/deadball"
 )
 
 func main() {
@@ -165,28 +165,10 @@ func main() {
 		},
 	}
 
-	game := deadball.NewGame(away, home)
+	game := deadball.New(away, home)
 
 	game.Run()
 
-	// inning := deadball.Inning{
-	// 	Outs:    0,
-	// 	Runs:    0,
-	// 	Hits:    0,
-	// 	Team:    team,
-	// 	Diamond: deadball.GetDiamond(),
-	// }
-
-	// inning.Run()
-
-	// for _, base := range inning.Diamond.Bases {
-	// 	name := "empty"
-	// 	if base.Player != nil {
-	// 		name = base.Player.Name
-	// 	}
-	// 	fmt.Printf("%s : %s\n", base.Name, name)
-	// }
-	// fmt.Printf("Runs: %d\n", inning.Runs)
 	if err := os.WriteFile("game.json", []byte(game.Log.String()), 0655); err != nil {
 		fmt.Printf("error saving game log: %v\n", err)
 	}

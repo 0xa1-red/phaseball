@@ -5,8 +5,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/0xa1-red/phaseball/internal/logger"
 	"github.com/op/go-logging"
-	"hq.0xa1.red/axdx/phaseball/internal/logger"
 )
 
 var log = getLogger()
@@ -41,11 +41,18 @@ func getLogger() *logging.Logger {
 	return log
 }
 
+type Score struct {
+	Innings map[int]int
+	Hits    uint8
+	Runs    uint8
+}
+
 type GameLog struct {
 	PlayedAt time.Time
 	Away     *Team
 	Home     *Team
 	Entries  []LogEntry
+	BoxScore map[string]Score
 }
 
 func NewGameLog(away, home *Team) *GameLog {
@@ -54,6 +61,7 @@ func NewGameLog(away, home *Team) *GameLog {
 		Away:     away,
 		Home:     home,
 		Entries:  make([]LogEntry, 0),
+		BoxScore: make(map[string]Score, 0),
 	}
 }
 
@@ -63,10 +71,26 @@ func (g *GameLog) Append(l LogEntry) {
 
 func (g *GameLog) String() string {
 	if j, err := json.MarshalIndent(g, "", "    "); err != nil {
-		return ""
+		panic(err)
 	} else {
 		return string(j)
 	}
+}
+
+func (g *GameLog) AddInning(inning int, team string, hits, runs uint8) {
+	if _, ok := g.BoxScore[team]; !ok {
+		g.BoxScore[team] = Score{
+			Innings: make(map[int]int, 0),
+			Hits:    0,
+			Runs:    0,
+		}
+	}
+
+	score := g.BoxScore[team]
+	score.Innings[inning] = int(runs)
+	score.Hits += hits
+	score.Runs += runs
+	g.BoxScore[team] = score
 }
 
 type LogEntry struct {

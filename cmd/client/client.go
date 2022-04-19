@@ -8,10 +8,10 @@ import (
 	"os"
 	"time"
 
+	"github.com/0xa1-red/phaseball/internal/deadball"
+	"github.com/0xa1-red/phaseball/internal/service"
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
-	"hq.0xa1.red/axdx/phaseball/internal/deadball"
-	"hq.0xa1.red/axdx/phaseball/internal/service"
 )
 
 func main() {
