@@ -61,7 +61,7 @@ func NewGameLog(away, home *Team) *GameLog {
 		Away:     away,
 		Home:     home,
 		Entries:  make([]LogEntry, 0),
-		BoxScore: make(map[string]Score, 0),
+		BoxScore: make(map[string]Score),
 	}
 }
 
