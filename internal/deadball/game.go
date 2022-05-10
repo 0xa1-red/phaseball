@@ -146,9 +146,23 @@ func NewInning(team *Team, pitcher *Player, log *GameLog, num uint8, half string
 // Run simulates an inning
 func (i *Inning) Run() {
 	i.Team.NewTurn(false)
+
+	i.Pitcher.CalculateDie()
+	fmt.Println()
+	fmt.Printf("%s %d | Pitching: %s | %d/%d/%d | Pitch die: %s\n",
+		i.Half,
+		i.Number,
+		i.Pitcher.Name,
+		i.Pitcher.Fastball,
+		i.Pitcher.Changeup,
+		i.Pitcher.Breaking,
+		i.Pitcher.PitchDie,
+	)
+
 	for i.Outs < 3 {
 		i.AtBat()
 	}
+	fmt.Printf("=> Hits: %d | Runs: %d\n", i.Hits, i.Runs)
 }
 
 func (i *Inning) ToLog() *InningLog {
@@ -209,25 +223,82 @@ func (i *Inning) PossibleDouble(swing int, outEvent Event, p *Player) Event {
 // AtBat simulates a single player's at bat scenario
 func (i *Inning) AtBat() {
 	// Select the batter
-	p := i.Team.AtBat()
+	batter := i.Team.AtBat()
 
 	l := LogEntry{
 		Inning:  i.ToLog(),
-		Batter:  p,
+		Batter:  batter,
 		Pitcher: i.Pitcher,
 		Extra:   make(map[string]interface{}),
 	}
 
-	_, pitchRoll := i.Pitcher.Pitch(p.Hand)
+	pow := batter.Power
+	con := batter.Contact
+	eye := batter.Eye
+	if batter.Position.ID == PositionPitcher {
+		pow = batter.Batting
+		con = batter.Batting
+		eye = batter.Batting
+	}
 
-	swing := dice.Roll(100, 1, 0) + pitchRoll
-	event := swingEvent(swing, int(p.BatterTarget))
+	batterTarget := pow + con + eye
+
+	fmt.Printf("\tAt bat: %s | %d/%d/%d | Batting Target: %d\n",
+		batter.Name,
+		pow,
+		con,
+		eye,
+		batterTarget,
+	)
+
+	pickPitch := dice.Roll(6, 1, 0)
+	var pitchMod int
+	var pitch string
+	switch pickPitch {
+	case 1, 2:
+		pitch = "FASTBALL"
+		pitchMod = i.Pitcher.Fastball
+		if batter.Position.ID == PositionPitcher {
+			pitchMod -= batter.Batting
+		} else {
+			pitchMod -= batter.Power
+		}
+	case 3, 4:
+		pitch = "CHANGEUP"
+		pitchMod = i.Pitcher.Changeup
+		if batter.Position.ID == PositionPitcher {
+			pitchMod -= batter.Batting
+		} else {
+			pitchMod -= batter.Contact
+		}
+	case 5, 6:
+		pitch = "BREAKING BALL"
+		pitchMod = i.Pitcher.Breaking
+		if batter.Position.ID == PositionPitcher {
+			pitchMod -= batter.Batting
+		} else {
+			pitchMod -= batter.Eye
+		}
+	}
+	fmt.Printf("\t\t%s is throwing a %s!\n", i.Pitcher.Name, pitch)
+	_, pitchRoll := i.Pitcher.Pitch(batter.Hand)
+
+	roll := dice.Roll(100, 1, 0)
+	swing := roll + pitchRoll + pitchMod
+	event := swingEvent(swing, batterTarget)
+	fmt.Printf("\t\t%s swings their bat... (d100: %d; Pitch roll: %d; Pitch modifier: %d; MSS: %d)\n",
+		batter.Name,
+		roll,
+		pitchRoll,
+		pitchMod,
+		swing,
+	)
 
 	var scored int
 	runners := []*Player{}
 	switch event {
 	case EventProdOut, EventPossibleDbl:
-		p.Status = StatusOut
+		batter.Status = StatusOut
 		i.Outs++
 	case EventHit, EventCrit:
 		hitResult, extra, out := Hit(swing, event == EventCrit)
@@ -243,7 +314,7 @@ func (i *Inning) AtBat() {
 
 		switch hitResult {
 		case EventHitSinglePlus:
-			if runs := i.Diamond.Single(p); len(runs) > 0 {
+			if runs := i.Diamond.Single(batter); len(runs) > 0 {
 				runners = append(runners, runs...)
 				scored += len(runs)
 			}
@@ -252,7 +323,7 @@ func (i *Inning) AtBat() {
 				runners = append(runners, runner)
 				scored++
 			}
-			if runs := i.Diamond.Single(p); len(runs) > 0 {
+			if runs := i.Diamond.Single(batter); len(runs) > 0 {
 				runners = append(runners, runs...)
 				scored += len(runs)
 			}
@@ -263,23 +334,23 @@ func (i *Inning) AtBat() {
 			if i.Diamond.Bases[0].Load(nil) != nil {
 				scored++
 			}
-			if runs := i.Diamond.Double(p); len(runs) > 0 {
+			if runs := i.Diamond.Double(batter); len(runs) > 0 {
 				runners = append(runners, runs...)
 				scored += len(runs)
 			}
 		case EventHitHomeRun:
-			if runs := i.Diamond.HomeRun(p); len(runs) > 0 {
+			if runs := i.Diamond.HomeRun(batter); len(runs) > 0 {
 				runners = append(runners, runs...)
 				scored += len(runs)
 			}
 			i.Team.Next()
 		case EventHitSingle1B, EventHitSingle2B, EventHitSingle3B, EventHitSingleSS:
 			if out {
-				p.Status = StatusOut
+				batter.Status = StatusOut
 				i.Outs++
 				break
 			}
-			if runs := i.Diamond.Single(p); len(runs) > 0 {
+			if runs := i.Diamond.Single(batter); len(runs) > 0 {
 				runners = append(runners, runs...)
 				scored += len(runs)
 			}
@@ -291,11 +362,11 @@ func (i *Inning) AtBat() {
 		case EventHitDoubleCF, EventHitDoubleLF, EventHitDoubleRF:
 			if out {
 				l.Event = hitResult
-				p.Status = StatusOut
+				batter.Status = StatusOut
 				i.Outs++
 				break
 			}
-			if runs := i.Diamond.Double(p); len(runs) > 0 {
+			if runs := i.Diamond.Double(batter); len(runs) > 0 {
 				runners = append(runners, runs...)
 				scored += len(runs)
 			}
@@ -307,11 +378,11 @@ func (i *Inning) AtBat() {
 		case EventHitTripleCF, EventHitTripleRF:
 			if out {
 				l.Event = hitResult
-				p.Status = StatusOut
+				batter.Status = StatusOut
 				i.Outs++
 				break
 			}
-			if runs := i.Diamond.Triple(p); len(runs) > 0 {
+			if runs := i.Diamond.Triple(batter); len(runs) > 0 {
 				runners = append(runners, runs...)
 				scored += len(runs)
 			}
@@ -325,24 +396,33 @@ func (i *Inning) AtBat() {
 		i.Hits++
 	case EventWalk:
 		l.Event = EventWalk // TODO: Refactor events and rename this
-		if runs := i.Diamond.Advance(p, 1); len(runs) > 0 {
+		if runs := i.Diamond.Advance(batter, 1); len(runs) > 0 {
 			runners = append(runners, runs...)
 			scored += len(runs)
 		}
 	}
 
-	if p.Status == StatusOut {
+	if batter.Status == StatusOut {
 		outEvent := Out(swing)
 		l.Event = outEvent
 		if event == EventProdOut {
 			if event, prunners := i.ProductiveOut(swing, outEvent); event == EventHitProductiveOut {
 				runners = append(runners, prunners...)
 				l.Event = event
+				fmt.Printf("\t\tResult: %s\n", event.Label)
+			} else {
+
+				fmt.Printf("\t\tResult: %s\n", outEvent.Label)
 			}
 		} else if event == EventPossibleDbl && i.Outs < 2 {
-			outEvent := i.PossibleDouble(swing, outEvent, p)
+			outEvent := i.PossibleDouble(swing, outEvent, batter)
 			l.Event = outEvent
+			fmt.Printf("\t\tResult: %s\n", outEvent.Label)
+		} else {
+			fmt.Printf("\t\tResult: %s\n", outEvent.Label)
 		}
+	} else {
+		fmt.Printf("\t\tResult: %s\n", event.Label)
 	}
 
 	if Verbosity() == verboseDebug {
@@ -354,6 +434,14 @@ func (i *Inning) AtBat() {
 		l.Runs = int(scored)
 		i.Runs = i.Runs + uint8(scored)
 		log.Debugf("\t\tRBI: %d\n", scored)
+
+		for i, p := range runners {
+			if i == 0 {
+				fmt.Printf("\tAnd a run comes in: %s\n", p.Name)
+			} else {
+				fmt.Printf("\tAnd another run comes in: %s\n", p.Name)
+			}
+		}
 	}
 
 	bases := struct {
