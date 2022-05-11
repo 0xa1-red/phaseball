@@ -301,7 +301,7 @@ func (i *Inning) AtBat() {
 		batter.Status = StatusOut
 		i.Outs++
 	case EventHit, EventCrit:
-		hitResult, extra, out := Hit(swing, event == EventCrit)
+		hitResult, extra, out := batter.Hit(swing, event == EventCrit)
 
 		if extra {
 			if runner := i.Diamond.Bases[0].Load(nil); runner != nil {

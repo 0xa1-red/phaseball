@@ -24,6 +24,7 @@ var (
 
 	EventHitDouble      Event = Event{Label: "DOUBLE"}
 	EventHitDoubleError Event = Event{Label: "DOUBLE_ERROR"}
+	EventHitDoubleAdv2  Event = Event{Label: "DOUBLE_ADV_2"}
 	EventHitDoubleAdv3  Event = Event{Label: "DOUBLE_ADV_3"}
 	EventHitDoubleLF    Event = Event{Label: "DOUBLE_DEF_LF"}
 	EventHitDoubleCF    Event = Event{Label: "DOUBLE_DEF_CF"}
@@ -64,58 +65,6 @@ func (e Event) GetLong() string {
 	}
 
 	return string(e.Label)
-}
-
-func Hit(swing int, crit bool) (result Event, extra bool, out bool) {
-	roll := dice.Roll(20, 1, 0)
-
-	return hit(swing, crit, roll)
-}
-
-func hit(swing int, crit bool, roll int) (Event, bool, bool) {
-	var (
-		result Event
-		extra  bool
-		out    bool
-	)
-
-	if roll >= 19 || crit && roll == 18 {
-		result, extra, out = EventHitHomeRun, false, false
-	} else if roll == 18 || crit && roll >= 16 {
-		if swing%2 == 0 {
-			result, extra, out = Defense(EventHitTripleRF)
-		} else {
-			result, extra, out = Defense(EventHitTripleCF)
-		}
-	} else if roll >= 16 || crit && roll == 15 {
-		result, extra, out = EventHitDoubleAdv3, false, false
-	} else if roll == 15 || crit && roll == 14 {
-		result, extra, out = Defense(EventHitDoubleRF)
-	} else if roll == 14 || crit && roll == 13 {
-		result, extra, out = Defense(EventHitDoubleCF)
-	} else if roll == 13 || crit && roll >= 8 {
-		result, extra, out = Defense(EventHitDoubleLF)
-	} else if roll >= 8 || crit && roll == 7 {
-		result, extra, out = EventHitSingleAdv2, false, false
-	} else if roll == 7 || crit && roll == 6 {
-		if swing%2 == 0 {
-			result, extra, out = Defense(EventHitSingleSS)
-		} else {
-			result, extra, out = Defense(EventHitSingle2B)
-		}
-	} else if roll == 6 || crit && roll == 5 {
-		result, extra, out = Defense(EventHitSingleSS)
-	} else if roll == 5 || crit && roll == 4 {
-		result, extra, out = Defense(EventHitSingle3B)
-	} else if roll == 4 || crit && roll == 3 {
-		result, extra, out = Defense(EventHitSingle2B)
-	} else if roll == 3 || crit && roll >= 1 {
-		result, extra, out = Defense(EventHitSingle1B)
-	} else {
-		result, extra, out = EventHitSinglePlus, false, false
-	}
-
-	return result, extra, out
 }
 
 func Defense(hit Event) (result Event, extra bool, out bool) {

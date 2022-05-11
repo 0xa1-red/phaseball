@@ -212,7 +212,8 @@ func TestHit(t *testing.T) {
 		tf := func(t *testing.T) {
 			t.Logf("Case %d - %s\n", i+1, label)
 			{
-				actualEvent, actualExtra, actualOut := hit(tt.swing, tt.crit, tt.roll)
+				p := Player{}
+				actualEvent, actualExtra, actualOut := p.hit(tt.swing, tt.crit, tt.roll)
 
 				if expected, actual := tt.expectedResult, actualEvent; expected != actual {
 					t.Fatalf("Fail: expected event %s, got %s", expected, actual)
