@@ -1,222 +1,58 @@
 package main
 
 import (
+	"flag"
 	"fmt"
+	"log"
 	"os"
 
+	"github.com/0xa1-red/phaseball/internal/config"
+	"github.com/0xa1-red/phaseball/internal/database"
 	"github.com/0xa1-red/phaseball/internal/deadball"
+	"github.com/google/uuid"
+	_ "github.com/lib/pq"
+)
+
+var (
+	configPath string
+	homeID     string
+	awayID     string
 )
 
 func main() {
-	away := deadball.Team{
-		Name:  "Away Avengers",
-		Index: 0,
-		Players: [9]*deadball.Player{
-			{
-				Name:     "Aimee Ní Laoghaire",
-				Status:   deadball.StatusWaiting,
-				Position: deadball.Pitcher,
-				Hand:     deadball.HandLeftie,
-				Fastball: 5,
-				Changeup: 4,
-				Breaking: 8,
-				Control:  5,
-				Batting:  2,
-			},
-			{
-				Name:     "Mairead O'Rourke",
-				Status:   deadball.StatusWaiting,
-				Position: deadball.Catcher,
-				Hand:     deadball.HandRightie,
-				Power:    5,
-				Contact:  6,
-				Eye:      6,
-				Speed:    5,
-				Defense:  5,
-			},
-			{
-				Name:     "Abaigeal Órfhlaith Níc Tómais",
-				Status:   deadball.StatusWaiting,
-				Position: deadball.First,
-				Hand:     deadball.HandSwitch,
-				Power:    4,
-				Contact:  4,
-				Eye:      8,
-				Speed:    4,
-				Defense:  5,
-			},
-			{
-				Name:     "Órlaith Ní Ceallaigh",
-				Status:   deadball.StatusWaiting,
-				Position: deadball.Second,
-				Hand:     deadball.HandRightie,
-				Power:    3,
-				Contact:  2,
-				Eye:      6,
-				Speed:    6,
-				Defense:  7,
-			},
-			{
-				Name:     "Peadar Ó Nualláin",
-				Status:   deadball.StatusWaiting,
-				Position: deadball.Third,
-				Hand:     deadball.HandRightie,
-				Power:    6,
-				Contact:  6,
-				Eye:      7,
-				Speed:    4,
-				Defense:  4,
-			},
-			{
-				Name:     "Aoibh Kavanagh",
-				Status:   deadball.StatusWaiting,
-				Position: deadball.Shortstop,
-				Hand:     deadball.HandRightie,
-				Power:    5,
-				Contact:  5,
-				Eye:      5,
-				Speed:    5,
-				Defense:  6,
-			},
-			{
-				Name:     "Ailín Ó Cuilinn",
-				Status:   deadball.StatusWaiting,
-				Position: deadball.Left,
-				Hand:     deadball.HandRightie,
-				Power:    3,
-				Contact:  5,
-				Eye:      5,
-				Speed:    3,
-				Defense:  6,
-			},
-			{
-				Name:     "Alastar Ó Conaill",
-				Status:   deadball.StatusWaiting,
-				Position: deadball.Center,
-				Hand:     deadball.HandRightie,
-				Power:    6,
-				Contact:  3,
-				Eye:      4,
-				Speed:    4,
-				Defense:  5,
-			},
-			{
-				Name:     "Daragh Mac Liam",
-				Status:   deadball.StatusWaiting,
-				Position: deadball.Right,
-				Hand:     deadball.HandLeftie,
-				Power:    5,
-				Contact:  4,
-				Eye:      5,
-				Speed:    4,
-				Defense:  6,
-			},
-		},
+	flag.StringVar(&configPath, "cfg", "./config.yml", "Configuration file in YAML format")
+	flag.StringVar(&awayID, "away", "", "Away team ID")
+	flag.StringVar(&homeID, "home", "", "Home team ID")
+	flag.Parse()
+
+	if awayID == "" || homeID == "" {
+		flag.Usage()
+		os.Exit(1)
 	}
-	home := deadball.Team{
-		Name:  "Home Heroes",
-		Index: 0,
-		Players: [9]*deadball.Player{
-			{
-				Name:     "Chloe Bell",
-				Status:   deadball.StatusWaiting,
-				Position: deadball.Pitcher,
-				Hand:     deadball.HandRightie,
-				Fastball: 6,
-				Changeup: 4,
-				Breaking: 4,
-				Control:  5,
-				Batting:  2,
-			},
-			{
-				Name:     "Ailís na Bríghde",
-				Status:   deadball.StatusWaiting,
-				Position: deadball.Catcher,
-				Hand:     deadball.HandRightie,
-				Power:    4,
-				Contact:  5,
-				Eye:      5,
-				Speed:    4,
-				Defense:  3,
-			},
-			{
-				Name:     "Aoibheann MacKenna",
-				Status:   deadball.StatusWaiting,
-				Position: deadball.First,
-				Hand:     deadball.HandRightie,
-				Power:    7,
-				Contact:  3,
-				Eye:      4,
-				Speed:    3,
-				Defense:  3,
-			},
-			{
-				Name:     "Caitlín Ní Dubhghaill",
-				Status:   deadball.StatusWaiting,
-				Position: deadball.Second,
-				Hand:     deadball.HandSwitch,
-				Power:    6,
-				Contact:  4,
-				Eye:      5,
-				Speed:    5,
-				Defense:  4,
-			},
-			{
-				Name:     "Victeoiria Ní Meagher",
-				Status:   deadball.StatusWaiting,
-				Position: deadball.Third,
-				Hand:     deadball.HandLeftie,
-				Power:    6,
-				Contact:  4,
-				Eye:      4,
-				Speed:    5,
-				Defense:  4,
-			},
-			{
-				Name:     "Shona Griffin",
-				Status:   deadball.StatusWaiting,
-				Position: deadball.Shortstop,
-				Hand:     deadball.HandRightie,
-				Power:    4,
-				Contact:  6,
-				Eye:      3,
-				Speed:    5,
-				Defense:  4,
-			},
-			{
-				Name:     "Cameron Ó Maoilriaghain",
-				Status:   deadball.StatusWaiting,
-				Position: deadball.Left,
-				Hand:     deadball.HandRightie,
-				Power:    4,
-				Contact:  3,
-				Eye:      3,
-				Speed:    7,
-				Defense:  8,
-			},
-			{
-				Name:     "Seosamh Ó Cuinn",
-				Status:   deadball.StatusWaiting,
-				Position: deadball.Center,
-				Hand:     deadball.HandRightie,
-				Power:    4,
-				Contact:  2,
-				Eye:      4,
-				Speed:    7,
-				Defense:  4,
-			},
-			{
-				Name:     "Melissa Ní Cathasaigh",
-				Status:   deadball.StatusWaiting,
-				Position: deadball.Right,
-				Hand:     deadball.HandRightie,
-				Power:    3,
-				Contact:  7,
-				Eye:      4,
-				Speed:    4,
-				Defense:  6,
-			},
-		},
+
+	awayUUID := uuid.MustParse(awayID)
+	homeUUID := uuid.MustParse(homeID)
+
+	if err := config.Init(configPath); err != nil {
+		panic(err)
+	}
+
+	db, err := database.Connection()
+	if err != nil {
+		log.Println("conn")
+		panic(err)
+	}
+
+	away, err := db.GetTeam(awayUUID)
+	if err != nil {
+		log.Println("home")
+		panic(err)
+	}
+
+	home, err := db.GetTeam(homeUUID)
+	if err != nil {
+		log.Println("home")
+		panic(err)
 	}
 
 	game := deadball.New(away, home)
