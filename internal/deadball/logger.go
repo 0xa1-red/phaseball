@@ -80,7 +80,7 @@ func (g *GameLog) String() string {
 func (g *GameLog) AddInning(inning int, team string, hits, runs uint8) {
 	if _, ok := g.BoxScore[team]; !ok {
 		g.BoxScore[team] = Score{
-			Innings: make(map[int]int, 0),
+			Innings: make(map[int]int),
 			Hits:    0,
 			Runs:    0,
 		}
