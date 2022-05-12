@@ -170,7 +170,11 @@ func (i *Inning) Run() {
 	// 	i.Pitcher.Breaking,
 	// 	i.Pitcher.PitchDie,
 	// )
-	i.NewLogger.Write("new inning",
+	msg := "new inning"
+	if i.Half == HalfBottom {
+		msg = "new half"
+	}
+	i.NewLogger.Write(msg,
 		logcore.Int("inning", i.Number),
 		logcore.String("half", i.Half),
 		logcore.String("pitcher", i.Pitcher.Name),
@@ -183,7 +187,7 @@ func (i *Inning) Run() {
 	for i.Outs < 3 {
 		i.AtBat()
 	}
-	msg := "end of half"
+	msg = "end of half"
 	if i.Half == HalfBottom {
 		msg = "end of inning"
 	}

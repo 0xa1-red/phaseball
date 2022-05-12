@@ -3,9 +3,11 @@ package database
 import (
 	"fmt"
 	"log"
+	"sync"
 
 	"github.com/0xa1-red/phaseball/internal/config"
 	"github.com/0xa1-red/phaseball/internal/deadball/model"
+	"github.com/0xa1-red/phaseball/internal/logger/logcore"
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 )
@@ -201,11 +203,24 @@ func (c *Conn) SaveGame(game Game) error {
 	return nil
 }
 
-func (c *Conn) WriteGameLog(timestamp string, gameID uuid.UUID, entry string) error {
-	_, err := c.Exec("INSERT INTO game_logs (created_at, idgame, entry) VALUES ($1, $2, $3)", timestamp, gameID.String(), entry)
-	if err != nil {
-		return err
+func (c *Conn) WriteGameLog(gameID uuid.UUID, entries []logcore.Entry) error {
+	wg := &sync.WaitGroup{}
+	sema := make(chan struct{}, 8)
+	for i := range entries {
+		wg.Add(1)
+		sema <- struct{}{}
+		entry := entries[i]
+		go func(entry logcore.Entry, w *sync.WaitGroup) {
+			defer func() {
+				wg.Done()
+				<-sema
+			}()
+			_, err := c.Exec("INSERT INTO game_logs (created_at, idgame, entry) VALUES ($1, $2, $3)", entry.Timestamp, gameID.String(), entry.Entry)
+			if err != nil {
+				log.Printf("Error: %v", err)
+			}
+		}(entry, wg)
 	}
-
+	wg.Wait()
 	return nil
 }

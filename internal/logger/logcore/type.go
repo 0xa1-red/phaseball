@@ -6,6 +6,12 @@ type GameLog interface {
 	Write(message string, fields ...Field) error
 	SetWithTimestamp(t bool)
 	SetGameID(id uuid.UUID)
+	Close() error
+}
+
+type Entry struct {
+	Timestamp string
+	Entry     string
 }
 
 type Number interface {

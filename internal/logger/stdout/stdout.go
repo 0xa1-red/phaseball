@@ -32,12 +32,16 @@ func New(opts ...logcore.LoggerOpt) *Logger {
 	return l
 }
 
+func (l *Logger) Close() error {
+	return nil
+}
+
 func (l *Logger) Write(message string, fields ...logcore.Field) error {
 	entryMap := map[string]interface{}{
 		"msg": message,
 	}
 
-	ts := time.Now().Format(time.RFC3339)
+	ts := time.Now().Format(time.RFC3339Nano)
 	if l.WithTimestamp {
 		entryMap["timestamp"] = ts
 	}
