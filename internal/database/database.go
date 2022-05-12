@@ -6,6 +6,7 @@ import (
 
 	"github.com/0xa1-red/phaseball/internal/config"
 	"github.com/0xa1-red/phaseball/internal/deadball"
+	"github.com/0xa1-red/phaseball/internal/deadball/model"
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 )
@@ -36,7 +37,7 @@ func Connection() (*Conn, error) {
 	return db, nil
 }
 
-func (c *Conn) SaveTeam(team deadball.Team) error {
+func (c *Conn) SaveTeam(team model.Team) error {
 	tx, err := c.Beginx()
 	if err != nil {
 		return err
@@ -85,71 +86,71 @@ func (c *Conn) SaveTeam(team deadball.Team) error {
 	return nil
 }
 
-func (c *Conn) GetTeam(id uuid.UUID) (deadball.Team, error) {
+func (c *Conn) GetTeam(id uuid.UUID) (model.Team, error) {
 	res := c.QueryRowx("SELECT name FROM teams WHERE id = $1", id.String())
 	if res.Err() != nil {
-		return deadball.Team{}, res.Err()
+		return model.Team{}, res.Err()
 	}
 
 	var name string
 	if err := res.Scan(&name); err != nil {
-		return deadball.Team{}, err
+		return model.Team{}, err
 	}
 
-	t := deadball.Team{
+	t := model.Team{
 		ID:   id,
 		Name: name,
 	}
 
 	playerRows, err := c.Queryx("SELECT * FROM players WHERE idteam = $1", id.String())
 	if err != nil {
-		return deadball.Team{}, err
+		return model.Team{}, err
 	}
 	defer playerRows.Close()
 
 	i := 0
 	for playerRows.Next() {
 		if playerRows.Err() != nil {
-			return deadball.Team{}, playerRows.Err()
+			return model.Team{}, playerRows.Err()
 		}
 
 		if err != nil {
-			return deadball.Team{}, err
+			return model.Team{}, err
 		}
 
 		p := make(map[string]interface{})
 		if err := playerRows.MapScan(p); err != nil {
-			return deadball.Team{}, err
+			return model.Team{}, err
 		}
 
 		id, err := uuid.ParseBytes(p["id"].([]byte))
 		if err != nil {
-			return deadball.Team{}, err
+			return model.Team{}, err
 		}
 
 		idteam, err := uuid.ParseBytes(p["idteam"].([]byte))
 		if err != nil {
-			return deadball.Team{}, err
+			return model.Team{}, err
 		}
 
 		h, ok := p["hand"].([]byte)
 		if !ok {
-			return deadball.Team{}, fmt.Errorf("Invalid string assertion for hand")
+			return model.Team{}, fmt.Errorf("Invalid string assertion for hand")
 		}
-		hand := deadball.HandRightie
+		hand := model.HandRightie
 		switch string(h) {
 		case "L":
-			hand = deadball.HandLeftie
+			hand = model.HandLeftie
 		case "S":
-			hand = deadball.HandSwitch
+			hand = model.HandSwitch
 		}
 
 		pos, ok := p["position"].([]byte)
 		if !ok {
-			return deadball.Team{}, fmt.Errorf("Invalid string assertion for position")
+			return model.Team{}, fmt.Errorf("Invalid string assertion for position")
 		}
 
-		player := &deadball.Player{
+		player := &model.Player{
 			ID:       id,
 			TeamID:   idteam,
 			Power:    int(p["batter_pow"].(int64)),
@@ -163,7 +164,7 @@ func (c *Conn) GetTeam(id uuid.UUID) (deadball.Team, error) {
 			Control:  int(p["pitcher_ctl"].(int64)),
 			Batting:  int(p["pitcher_bat"].(int64)),
 			Name:     p["name"].(string),
-			Position: deadball.GetPositionFromShort(string(pos)),
+			Position: model.GetPositionFromShort(string(pos)),
 			Hand:     hand,
 		}
 
@@ -181,7 +182,7 @@ func (c *Conn) SaveGame(game *deadball.Game) error {
 	}
 
 	if _, err := tx.Exec("INSERT INTO games (id, idaway, idhome) VALUES ($1, $2, $3)",
-		game.ID, game.Teams[deadball.TeamAway].ID.String(), game.Teams[deadball.TeamHome].ID.String(),
+		game.ID, game.Teams[model.TeamAway].ID.String(), game.Teams[model.TeamHome].ID.String(),
 	); err != nil {
 		tx.Rollback() // nolint
 		return err

@@ -3,6 +3,7 @@ package deadball
 import (
 	"fmt"
 
+	"github.com/0xa1-red/phaseball/internal/deadball/model"
 	"github.com/0xa1-red/phaseball/internal/dice"
 	"github.com/0xa1-red/phaseball/internal/logger"
 	"github.com/google/uuid"
@@ -19,7 +20,7 @@ TODO: The game should end if the team playing the bottom inning in the last roun
 type Game struct {
 	ID     uuid.UUID
 	Turns  []*Turn
-	Teams  map[string]*Team
+	Teams  map[string]*model.Team
 	Log    *GameLog
 	NewLog *logger.NewLogger
 }
@@ -35,11 +36,11 @@ func (g *Game) NewInning(num uint8, half string) *Inning {
 	return &Inning{}
 }
 
-func New(away, home Team) *Game {
+func New(away, home model.Team) *Game {
 	return &Game{
 		ID:    uuid.New(),
 		Turns: make([]*Turn, 0),
-		Teams: map[string]*Team{
+		Teams: map[string]*model.Team{
 			TeamAway: &away,
 			TeamHome: &home,
 		},
@@ -125,13 +126,13 @@ type Inning struct {
 	Half      string
 	Logger    *GameLog
 	NewLogger *logger.NewLogger
-	Team      *Team
-	Pitcher   *Player
+	Team      *model.Team
+	Pitcher   *model.Player
 	Diamond   *Diamond
 }
 
 // NewInning creates a new inning for a team
-func NewInning(team *Team, pitcher *Player, log *GameLog, newLog *logger.NewLogger, num uint8, half string) *Inning {
+func NewInning(team *model.Team, pitcher *model.Player, log *GameLog, newLog *logger.NewLogger, num uint8, half string) *Inning {
 	inning := Inning{
 		Team:      team,
 		Pitcher:   pitcher,
@@ -211,8 +212,8 @@ type InningLog struct {
 	Runs   uint8
 }
 
-func (i *Inning) ProductiveOut(swing int, outEvent Event) (Event, []*Player) {
-	runners := make([]*Player, 0)
+func (i *Inning) ProductiveOut(swing int, outEvent Event) (Event, []*model.Player) {
+	runners := make([]*model.Player, 0)
 	event := outEvent
 	if swing < 70 && IsOutOutfield(outEvent) && i.Outs < 3 {
 		if p2 := i.Diamond.Bases[1].Player; p2 != nil {
@@ -231,7 +232,7 @@ func (i *Inning) ProductiveOut(swing int, outEvent Event) (Event, []*Player) {
 	return event, runners
 }
 
-func (i *Inning) PossibleDouble(swing int, outEvent Event, p *Player) Event {
+func (i *Inning) PossibleDouble(swing int, outEvent Event, p *model.Player) Event {
 	event := outEvent
 	digit := LastDigit(swing)
 	if i.Diamond.Bases[0].Player != nil && IsOutInfield(outEvent) && digit >= 3 && digit < 7 {
@@ -338,7 +339,7 @@ func (i *Inning) AtBat() {
 	)
 
 	var scored int
-	runners := []*Player{}
+	runners := []*model.Player{}
 	switch event {
 	case EventProdOut, EventPossibleDbl:
 		batter.Status = StatusOut
@@ -579,8 +580,8 @@ func GetDiamond() *Diamond {
 }
 
 // Advance pushes a batter up n bases
-func (d *Diamond) Advance(p *Player, bases int) []*Player {
-	runs := make([]*Player, 0)
+func (d *Diamond) Advance(p *model.Player, bases int) []*model.Player {
+	runs := make([]*model.Player, 0)
 	if bases == 4 {
 		for i := len(d.Bases) - 1; i >= 0; i-- {
 			// For every player on base we add a run, reset their status and remove from the diamond
@@ -609,22 +610,22 @@ func (d *Diamond) Advance(p *Player, bases int) []*Player {
 }
 
 // Single is a shorthand for advancing a base
-func (d *Diamond) Single(p *Player) []*Player {
+func (d *Diamond) Single(p *model.Player) []*model.Player {
 	return d.Advance(p, 1)
 }
 
 // Double is a shorthand for advancing 2 bases
-func (d *Diamond) Double(p *Player) []*Player {
+func (d *Diamond) Double(p *model.Player) []*model.Player {
 	return d.Advance(p, 2)
 }
 
 // Triple is a shorthand for advancing 3 bases
-func (d *Diamond) Triple(p *Player) []*Player {
+func (d *Diamond) Triple(p *model.Player) []*model.Player {
 	return d.Advance(p, 3)
 }
 
 // HomeRun is a shorthand for running in and clearing all loaded bases
-func (d *Diamond) HomeRun(p *Player) []*Player {
+func (d *Diamond) HomeRun(p *model.Player) []*model.Player {
 	return d.Advance(p, 4)
 }
 
@@ -632,12 +633,12 @@ func (d *Diamond) HomeRun(p *Player) []*Player {
 type Base struct {
 	Name   string
 	Next   *Base
-	Player *Player
+	Player *model.Player
 }
 
 // Load puts a player on a base or in some cases pushes a player further from that base
 // without loading it.
-func (b *Base) Load(p *Player) *Player {
+func (b *Base) Load(p *model.Player) *model.Player {
 	pp := "empty"
 	if p != nil {
 		pp = p.Name
