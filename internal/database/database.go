@@ -5,7 +5,6 @@ import (
 	"log"
 
 	"github.com/0xa1-red/phaseball/internal/config"
-	"github.com/0xa1-red/phaseball/internal/deadball"
 	"github.com/0xa1-red/phaseball/internal/deadball/model"
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
@@ -15,6 +14,16 @@ var db *Conn
 
 type Conn struct {
 	*sqlx.DB
+}
+
+type Game struct {
+	ID    uuid.UUID
+	Teams TeamList
+}
+
+type TeamList struct {
+	Away uuid.UUID
+	Home uuid.UUID
 }
 
 func Connection() (*Conn, error) {
@@ -175,19 +184,28 @@ func (c *Conn) GetTeam(id uuid.UUID) (model.Team, error) {
 	return t, nil
 }
 
-func (c *Conn) SaveGame(game *deadball.Game) error {
+func (c *Conn) SaveGame(game Game) error {
 	tx, err := c.Beginx()
 	if err != nil {
 		return err
 	}
 
 	if _, err := tx.Exec("INSERT INTO games (id, idaway, idhome) VALUES ($1, $2, $3)",
-		game.ID, game.Teams[model.TeamAway].ID.String(), game.Teams[model.TeamHome].ID.String(),
+		game.ID, game.Teams.Away.String(), game.Teams.Home.String(),
 	); err != nil {
 		tx.Rollback() // nolint
 		return err
 	}
 
 	tx.Commit() // nolint
+	return nil
+}
+
+func (c *Conn) WriteGameLog(timestamp string, gameID uuid.UUID, entry string) error {
+	_, err := c.Exec("INSERT INTO game_logs (created_at, idgame, entry) VALUES ($1, $2, $3)", timestamp, gameID.String(), entry)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }

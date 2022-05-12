@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/0xa1-red/phaseball/internal/deadball/model"
-	"github.com/0xa1-red/phaseball/internal/logger"
+	"github.com/0xa1-red/phaseball/internal/logger/stdout"
 )
 
 var team = model.Team{
@@ -113,7 +113,7 @@ func TestInning_PossibleDouble(t *testing.T) {
 			{
 				GetDiamond().Reset()
 				team.NewTurn(true)
-				i := NewInning(&team, &model.Player{Name: "Peter Test"}, &GameLog{}, &logger.NewLogger{}, 1, HalfTop)
+				i := NewInning(&team, &model.Player{Name: "Peter Test"}, &GameLog{}, stdout.New(), 1, HalfTop)
 				i.Outs = tt.outs
 				i.Diamond.Bases[0].Player = team.Players[0]
 
@@ -188,7 +188,7 @@ func TestInning_ProductiveOut(t *testing.T) {
 			{
 				GetDiamond().Reset()
 				team.NewTurn(true)
-				i := NewInning(&team, &model.Player{Name: "Peter Test"}, &GameLog{}, &logger.NewLogger{}, 1, HalfTop)
+				i := NewInning(&team, &model.Player{Name: "Peter Test"}, &GameLog{}, stdout.New(), 1, HalfTop)
 				i.Outs = 1
 				i.Diamond.Bases[1].Player = tt.p2
 				i.Diamond.Bases[2].Player = tt.p3

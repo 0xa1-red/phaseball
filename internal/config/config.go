@@ -7,6 +7,9 @@ import (
 )
 
 type Settings struct {
+	Logging struct {
+		Kind string
+	}
 	Database DatabaseSettings
 }
 

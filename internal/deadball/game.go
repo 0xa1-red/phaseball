@@ -6,6 +6,7 @@ import (
 	"github.com/0xa1-red/phaseball/internal/deadball/model"
 	"github.com/0xa1-red/phaseball/internal/dice"
 	"github.com/0xa1-red/phaseball/internal/logger"
+	"github.com/0xa1-red/phaseball/internal/logger/logcore"
 	"github.com/google/uuid"
 )
 
@@ -22,7 +23,7 @@ type Game struct {
 	Turns  []*Turn
 	Teams  map[string]*model.Team
 	Log    *GameLog
-	NewLog *logger.NewLogger
+	NewLog logcore.GameLog
 }
 
 func (g *Game) NewInning(num uint8, half string) *Inning {
@@ -37,14 +38,15 @@ func (g *Game) NewInning(num uint8, half string) *Inning {
 }
 
 func New(away, home model.Team) *Game {
+	id := uuid.New()
 	return &Game{
-		ID:    uuid.New(),
+		ID:    id,
 		Turns: make([]*Turn, 0),
 		Teams: map[string]*model.Team{
 			TeamAway: &away,
 			TeamHome: &home,
 		},
-		NewLog: &logger.NewLogger{WithTimestamp: true},
+		NewLog: logger.NewGameLogger(id),
 	}
 }
 
@@ -125,14 +127,14 @@ type Inning struct {
 	Runs      uint8
 	Half      string
 	Logger    *GameLog
-	NewLogger *logger.NewLogger
+	NewLogger logcore.GameLog
 	Team      *model.Team
 	Pitcher   *model.Player
 	Diamond   *Diamond
 }
 
 // NewInning creates a new inning for a team
-func NewInning(team *model.Team, pitcher *model.Player, log *GameLog, newLog *logger.NewLogger, num uint8, half string) *Inning {
+func NewInning(team *model.Team, pitcher *model.Player, log *GameLog, newLog logcore.GameLog, num uint8, half string) *Inning {
 	inning := Inning{
 		Team:      team,
 		Pitcher:   pitcher,
@@ -169,13 +171,13 @@ func (i *Inning) Run() {
 	// 	i.Pitcher.PitchDie,
 	// )
 	i.NewLogger.Write("new inning",
-		logger.Int("inning", i.Number),
-		logger.String("half", i.Half),
-		logger.String("pitcher", i.Pitcher.Name),
-		logger.Int("fastball", i.Pitcher.Fastball),
-		logger.Int("changeup", i.Pitcher.Changeup),
-		logger.Int("breaking", i.Pitcher.Breaking),
-		logger.String("pitch_die", string(i.Pitcher.PitchDie)),
+		logcore.Int("inning", i.Number),
+		logcore.String("half", i.Half),
+		logcore.String("pitcher", i.Pitcher.Name),
+		logcore.Int("fastball", i.Pitcher.Fastball),
+		logcore.Int("changeup", i.Pitcher.Changeup),
+		logcore.Int("breaking", i.Pitcher.Breaking),
+		logcore.String("pitch_die", string(i.Pitcher.PitchDie)),
 	)
 
 	for i.Outs < 3 {
@@ -186,10 +188,10 @@ func (i *Inning) Run() {
 		msg = "end of inning"
 	}
 	i.NewLogger.Write(msg,
-		logger.Int("inning", i.Number),
-		logger.String("half", i.Half),
-		logger.Int("hits", i.Hits),
-		logger.Int("runs", i.Runs),
+		logcore.Int("inning", i.Number),
+		logcore.String("half", i.Half),
+		logcore.Int("hits", i.Hits),
+		logcore.Int("runs", i.Runs),
 	)
 	// fmt.Printf("=> Hits: %d | Runs: %d\n", i.Hits, i.Runs)
 }
@@ -280,11 +282,11 @@ func (i *Inning) AtBat() {
 	// 	batterTarget,
 	// )
 	i.NewLogger.Write("at bat",
-		logger.String("name", batter.Name),
-		logger.Int("power", pow),
-		logger.Int("contact", con),
-		logger.Int("eye", eye),
-		logger.Int("batter_target", batterTarget),
+		logcore.String("name", batter.Name),
+		logcore.Int("power", pow),
+		logcore.Int("contact", con),
+		logcore.Int("eye", eye),
+		logcore.Int("batter_target", batterTarget),
 	)
 
 	pickPitch := dice.Roll(6, 1, 0)
@@ -317,7 +319,7 @@ func (i *Inning) AtBat() {
 		}
 	}
 	// fmt.Printf("\t\t%s is throwing a %s!\n", i.Pitcher.Name, pitch)
-	i.NewLogger.Write("pitch", logger.String("pitcher", i.Pitcher.Name), logger.String("pitch", pitch))
+	i.NewLogger.Write("pitch", logcore.String("pitcher", i.Pitcher.Name), logcore.String("pitch", pitch))
 	_, pitchRoll := i.Pitcher.Pitch(batter.Hand)
 
 	roll := dice.Roll(100, 1, 0)
@@ -331,11 +333,11 @@ func (i *Inning) AtBat() {
 	// 	swing,
 	// )
 	i.NewLogger.Write("swing",
-		logger.String("name", batter.Name),
-		logger.Int("swing_roll", roll),
-		logger.Int("pitch_roll", pitchRoll),
-		logger.Int("pitch_modifier", pitchMod),
-		logger.Int("swing_score", swing),
+		logcore.String("name", batter.Name),
+		logcore.Int("swing_roll", roll),
+		logcore.Int("pitch_roll", pitchRoll),
+		logcore.Int("pitch_modifier", pitchMod),
+		logcore.Int("swing_score", swing),
 	)
 
 	var scored int
@@ -470,11 +472,11 @@ func (i *Inning) AtBat() {
 			logEvent = outEvent.Label
 		}
 
-		i.NewLogger.Write("out", logger.String("name", batter.Name), logger.String("event", logEvent))
+		i.NewLogger.Write("out", logcore.String("name", batter.Name), logcore.String("event", logEvent))
 	} else {
 		// fmt.Printf("\t\tResult: %s\n", event.Label)
 		logEvent = event.Label
-		i.NewLogger.Write("hit", logger.String("name", batter.Name), logger.String("event", logEvent))
+		i.NewLogger.Write("hit", logcore.String("name", batter.Name), logcore.String("event", logEvent))
 	}
 
 	if Verbosity() == verboseDebug {
@@ -488,7 +490,7 @@ func (i *Inning) AtBat() {
 		log.Debugf("\t\tRBI: %d\n", scored)
 
 		for _, p := range runners {
-			i.NewLogger.Write("run", logger.String("name", p.Name), logger.String("batter", batter.Name))
+			i.NewLogger.Write("run", logcore.String("name", p.Name), logcore.String("batter", batter.Name))
 			// 	if i == 0 {
 			// 		fmt.Printf("\tAnd a run comes in: %s\n", p.Name)
 			// 	} else {

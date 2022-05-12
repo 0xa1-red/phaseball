@@ -56,7 +56,14 @@ func main() {
 	}
 
 	game := deadball.New(away, home)
-	if err := db.SaveGame(game); err != nil {
+	gameModel := database.Game{
+		ID: game.ID,
+		Teams: database.TeamList{
+			Away: game.Teams[deadball.TeamAway].ID,
+			Home: game.Teams[deadball.TeamHome].ID,
+		},
+	}
+	if err := db.SaveGame(gameModel); err != nil {
 		panic(err)
 	}
 
