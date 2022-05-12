@@ -56,6 +56,9 @@ func main() {
 	}
 
 	game := deadball.New(away, home)
+	if err := db.SaveGame(game); err != nil {
+		panic(err)
+	}
 
 	game.Run()
 

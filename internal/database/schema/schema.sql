@@ -25,3 +25,21 @@ CREATE TABLE players (
 
     FOREIGN KEY (idteam) REFERENCES teams (id) ON DELETE SET NULL
 );
+
+CREATE TABLE games (
+    id UUID NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
+    idaway UUID NOT NULL,
+    idhome UUID NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+
+    FOREIGN KEY (idaway) REFERENCES teams (id),
+    FOREIGN KEY (idhome) REFERENCES teams (id)
+);
+
+CREATE TABLE game_logs (
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    idgame UUID NOT NULL,
+    entry JSONB NOT NULL,
+
+    FOREIGN KEY (idgame) REFERENCES games (id)
+);

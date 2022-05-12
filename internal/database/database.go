@@ -37,7 +37,7 @@ func Connection() (*Conn, error) {
 }
 
 func (c *Conn) SaveTeam(team deadball.Team) error {
-	tx, err := c.Begin()
+	tx, err := c.Beginx()
 	if err != nil {
 		return err
 	}
@@ -172,4 +172,21 @@ func (c *Conn) GetTeam(id uuid.UUID) (deadball.Team, error) {
 	}
 
 	return t, nil
+}
+
+func (c *Conn) SaveGame(game *deadball.Game) error {
+	tx, err := c.Beginx()
+	if err != nil {
+		return err
+	}
+
+	if _, err := tx.Exec("INSERT INTO games (id, idaway, idhome) VALUES ($1, $2, $3)",
+		game.ID, game.Teams[deadball.TeamAway].ID.String(), game.Teams[deadball.TeamHome].ID.String(),
+	); err != nil {
+		tx.Rollback() // nolint
+		return err
+	}
+
+	tx.Commit() // nolint
+	return nil
 }
