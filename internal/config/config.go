@@ -9,6 +9,7 @@ import (
 type Settings struct {
 	Logging struct {
 		Kind string
+		Path string
 	}
 	Database DatabaseSettings
 }
