@@ -15,8 +15,6 @@ Game represents a single baseball match.
 A game runs for at least 9 turns consisting of a top and a bottom inning.
 If the score (runs) is even after 9 turns, the game goes into overtime, meaning the first full
 turn with a winning score ends the game.
-
-TODO: The game should end if the team playing the bottom inning in the last round is in the lead
 */
 type Game struct {
 	ID     uuid.UUID
@@ -74,11 +72,15 @@ func (g *Game) Run() {
 
 		log.Debugf("Inning %d - TOP - %s\n", i+1, g.Teams[TeamAway].Name)
 		turn.Top.Run()
-		g.Log.AddInning(i+1, TeamAway, turn.Top.Hits, turn.Top.Runs)
+
+		// if it's the bottom of the 9th inning and the away team is losing, the game is over
+		if inning, r := i+1, g.Score(); inning == 9 && r[TeamAway] < r[TeamHome] {
+			turn.Bottom.Skipped = true
+			return
+		}
 
 		log.Debugf("Inning %d - BOTTOM - %s\n", i+1, g.Teams[TeamHome].Name)
 		turn.Bottom.Run()
-		g.Log.AddInning(i+1, TeamHome, turn.Bottom.Hits, turn.Bottom.Runs)
 		g.Turns = append(g.Turns, turn)
 	}
 
@@ -97,12 +99,10 @@ func (g *Game) Run() {
 
 			log.Debugf("Inning %d - TOP - %s\n", i+1, g.Teams[TeamAway].Name)
 			turn.Top.Run()
-			g.Log.AddInning(i+1, TeamAway, turn.Top.Hits, turn.Top.Runs)
 
 			log.Debugf("Inning %d - BOTTOM - %s\n", i+1, g.Teams[TeamHome].Name)
 			turn.Bottom.Run()
 			g.Turns = append(g.Turns, turn)
-			g.Log.AddInning(i+1, TeamHome, turn.Bottom.Hits, turn.Bottom.Runs)
 
 			runs := g.Score()
 			awayRuns = runs[TeamAway]
@@ -121,6 +121,7 @@ type Turn struct {
 
 // Inning represents a teams turn at batting
 type Inning struct {
+	Skipped   bool
 	Number    uint8
 	Outs      uint8
 	Hits      uint8
