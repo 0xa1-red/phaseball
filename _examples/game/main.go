@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"log"
 	"os"
 
@@ -70,8 +69,4 @@ func main() {
 	game.Run()
 
 	game.NewLog.Close()
-
-	if err := os.WriteFile("game.json", []byte(game.Log.String()), 0655); err != nil {
-		fmt.Printf("error saving game log: %v\n", err)
-	}
 }

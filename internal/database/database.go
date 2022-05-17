@@ -215,7 +215,7 @@ func (c *Conn) WriteGameLog(gameID uuid.UUID, entries []logcore.Entry) error {
 				wg.Done()
 				<-sema
 			}()
-			_, err := c.Exec("INSERT INTO game_logs (created_at, idgame, entry) VALUES ($1, $2, $3)", entry.Timestamp, gameID.String(), entry.Entry)
+			_, err := c.Exec("INSERT INTO game_logs (created_at, idgame, entry, seq) VALUES ($1, $2, $3, $4)", entry.Timestamp, gameID.String(), entry.Entry, entry.Seq)
 			if err != nil {
 				log.Printf("Error: %v", err)
 			}

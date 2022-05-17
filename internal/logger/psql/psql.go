@@ -15,7 +15,7 @@ type Logger struct {
 	GameID        uuid.UUID
 
 	mx      *sync.Mutex
-	entries []logcore.Entry
+	entries *logcore.EntryCollection
 }
 
 func (l *Logger) SetGameID(id uuid.UUID) {
@@ -28,8 +28,7 @@ func (l *Logger) SetWithTimestamp(t bool) {
 
 func New(opts ...logcore.LoggerOpt) *Logger {
 	l := &Logger{
-		mx:      &sync.Mutex{},
-		entries: make([]logcore.Entry, 0),
+		entries: logcore.NewCollection(),
 	}
 
 	for _, opt := range opts {
@@ -45,11 +44,7 @@ func (l *Logger) Close() error {
 		return err
 	}
 
-	l.mx.Lock()
-	entries := l.entries
-	l.mx.Unlock()
-
-	if err := db.WriteGameLog(l.GameID, entries); err != nil {
+	if err := db.WriteGameLog(l.GameID, l.entries.Entries()); err != nil {
 		return err
 	}
 	return nil
@@ -74,11 +69,7 @@ func (l *Logger) Write(message string, fields ...logcore.Field) error {
 		return err
 	}
 
-	l.mx.Lock()
-	defer l.mx.Unlock()
-	entries := l.entries
-	entries = append(entries, logcore.Entry{Timestamp: ts, Entry: string(raw)})
-	l.entries = entries
+	l.entries.Add(logcore.Entry{Timestamp: ts, Entry: string(raw)})
 
 	return nil
 }

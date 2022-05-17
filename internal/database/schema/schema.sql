@@ -39,6 +39,7 @@ CREATE TABLE games (
 CREATE TABLE game_logs (
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     idgame UUID NOT NULL,
+    seq INTEGER NOT NULL DEFAULT 0,
     entry JSONB NOT NULL,
 
     FOREIGN KEY (idgame) REFERENCES games (id)

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"sync"
 	"time"
 
 	"github.com/0xa1-red/phaseball/internal/config"
@@ -17,8 +16,8 @@ type Logger struct {
 	WithTimestamp bool
 	GameID        uuid.UUID
 
-	mx      *sync.Mutex
-	entries []logcore.Entry
+	seq     int
+	entries *logcore.EntryCollection
 	fp      *os.File
 }
 
@@ -36,15 +35,14 @@ func New(opts ...logcore.LoggerOpt) *Logger {
 		log.Println("Path is not set for logging, not creating logger facility")
 		return nil
 	}
-	fp, err := os.OpenFile(path, os.O_RDONLY, 0755)
+	fp, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0755)
 	if err != nil {
 		fmt.Printf("Error opening path given for logger: %v\n", err)
 		return nil
 	}
 
 	l := &Logger{
-		mx:      &sync.Mutex{},
-		entries: make([]logcore.Entry, 0),
+		entries: logcore.NewCollection(),
 		fp:      fp,
 	}
 
@@ -56,15 +54,10 @@ func New(opts ...logcore.LoggerOpt) *Logger {
 }
 
 func (l *Logger) Close() error {
-	l.mx.Lock()
-	defer func() {
-		l.mx.Unlock()
-		l.fp.Close()
-	}()
-	entries := l.entries
+	defer l.fp.Close()
 
 	encoder := json.NewEncoder(l.fp)
-	return encoder.Encode(entries)
+	return encoder.Encode(l.entries.Entries())
 }
 
 func (l *Logger) Write(message string, fields ...logcore.Field) error {
@@ -86,11 +79,7 @@ func (l *Logger) Write(message string, fields ...logcore.Field) error {
 		return err
 	}
 
-	l.mx.Lock()
-	defer l.mx.Unlock()
-	entries := l.entries
-	entries = append(entries, logcore.Entry{Timestamp: ts, Entry: string(raw)})
-	l.entries = entries
+	l.entries.Add(logcore.Entry{Timestamp: ts, Entry: string(raw)})
 
 	return nil
 }

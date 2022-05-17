@@ -1,6 +1,12 @@
 package logcore
 
-import "github.com/google/uuid"
+import (
+	"log"
+	"sort"
+	"sync"
+
+	"github.com/google/uuid"
+)
 
 type GameLog interface {
 	Write(message string, fields ...Field) error
@@ -10,8 +16,48 @@ type GameLog interface {
 }
 
 type Entry struct {
+	Seq       int
 	Timestamp string
 	Entry     string
+}
+
+type EntryCollection struct {
+	entries []Entry
+	mx      *sync.Mutex
+	seq     int
+}
+
+func (c *EntryCollection) Add(entry Entry) {
+	c.mx.Lock()
+	defer c.mx.Unlock()
+	c.seq += 1
+	entry.Seq = c.seq
+	entries := c.entries
+	entries = append(entries, entry)
+	c.entries = entries
+	log.Println(c.seq)
+	log.Println(entry.Seq)
+}
+
+func NewCollection() *EntryCollection {
+	return &EntryCollection{
+		entries: make([]Entry, 0),
+		mx:      &sync.Mutex{},
+		seq:     0,
+	}
+}
+
+func (c *EntryCollection) Entries() []Entry {
+	c.mx.Lock()
+	defer c.mx.Unlock()
+	if c.entries == nil {
+		c.entries = make([]Entry, 0)
+	}
+	entries := c.entries
+	sort.Slice(entries, func(i, j int) bool {
+		return entries[i].Seq > entries[j].Seq
+	})
+	return entries
 }
 
 type Number interface {
