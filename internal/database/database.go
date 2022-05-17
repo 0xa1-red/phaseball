@@ -1,6 +1,8 @@
 package database
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"log"
 	"sync"
@@ -215,7 +217,13 @@ func (c *Conn) WriteGameLog(gameID uuid.UUID, entries []logcore.Entry) error {
 				wg.Done()
 				<-sema
 			}()
-			_, err := c.Exec("INSERT INTO game_logs (created_at, idgame, entry, seq) VALUES ($1, $2, $3, $4)", entry.Timestamp, gameID.String(), entry.Entry, entry.Seq)
+			b := bytes.NewBuffer([]byte(""))
+			encoder := json.NewEncoder(b)
+			if err := encoder.Encode(entry.Entry); err != nil {
+				log.Printf("Error: %v", err)
+				return
+			}
+			_, err := c.Exec("INSERT INTO game_logs (created_at, idgame, entry, seq) VALUES ($1, $2, $3, $4)", entry.Timestamp, gameID.String(), b.String(), entry.Seq)
 			if err != nil {
 				log.Printf("Error: %v", err)
 			}

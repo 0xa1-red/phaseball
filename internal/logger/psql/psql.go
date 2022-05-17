@@ -1,7 +1,6 @@
 package psql
 
 import (
-	"encoding/json"
 	"sync"
 	"time"
 
@@ -64,12 +63,5 @@ func (l *Logger) Write(message string, fields ...logcore.Field) error {
 		field.Apply(entryMap)
 	}
 
-	raw, err := json.Marshal(entryMap)
-	if err != nil {
-		return err
-	}
-
-	l.entries.Add(logcore.Entry{Timestamp: ts, Entry: string(raw)})
-
-	return nil
+	return l.entries.Add(logcore.Entry{Timestamp: ts, Entry: entryMap})
 }

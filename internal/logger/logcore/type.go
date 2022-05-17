@@ -1,7 +1,8 @@
 package logcore
 
 import (
-	"log"
+	"bytes"
+	"encoding/json"
 	"sort"
 	"sync"
 
@@ -18,7 +19,7 @@ type GameLog interface {
 type Entry struct {
 	Seq       int
 	Timestamp string
-	Entry     string
+	Entry     map[string]interface{}
 }
 
 type EntryCollection struct {
@@ -27,16 +28,21 @@ type EntryCollection struct {
 	seq     int
 }
 
-func (c *EntryCollection) Add(entry Entry) {
+func (c *EntryCollection) Add(entry Entry) error {
 	c.mx.Lock()
 	defer c.mx.Unlock()
 	c.seq += 1
 	entry.Seq = c.seq
+	entry.Entry["seq"] = c.seq
+	b := bytes.NewBuffer([]byte(""))
+	encoder := json.NewEncoder(b)
+	if err := encoder.Encode(entry.Entry); err != nil {
+		return err
+	}
 	entries := c.entries
 	entries = append(entries, entry)
 	c.entries = entries
-	log.Println(c.seq)
-	log.Println(entry.Seq)
+	return nil
 }
 
 func NewCollection() *EntryCollection {
