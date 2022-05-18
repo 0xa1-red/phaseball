@@ -115,6 +115,16 @@ type Position struct {
 
 // Player represents a single player
 type Player struct {
+	Power        int
+	Contact      int
+	Eye          int
+	Speed        int
+	Defense      int
+	Fastball     int
+	Changeup     int
+	Breaking     int
+	Control      int
+	Batting      int
 	Name         string
 	Status       string `json:"-"`
 	Position     Position
@@ -146,4 +156,18 @@ func (p *Player) Pitch(batterHand string) (PitchDie, int) {
 	}
 
 	return PitchNone, 0
+}
+
+func (p *Player) CalculateDie() {
+	avg := float64(p.Fastball+p.Changeup+p.Breaking+p.Control) / 4
+
+	if avg <= 5 {
+		p.PitchDie = PitchSubD4
+	} else if avg <= 6 {
+		p.PitchDie = PitchAddD4
+	} else if avg <= 7 {
+		p.PitchDie = PitchAddD8
+	} else {
+		p.PitchDie = PitchAddD12
+	}
 }
