@@ -1,10 +1,11 @@
-package deadball
+package model
 
 import (
 	"fmt"
 	"strings"
 
 	"github.com/0xa1-red/phaseball/internal/dice"
+	"github.com/google/uuid"
 )
 
 const (
@@ -27,9 +28,10 @@ var (
 
 // Team represents a team in a match
 type Team struct {
-	Name    string
-	Players [9]*Player
-	Index   int `json:"-"`
+	ID      uuid.UUID  `db:"id"`
+	Name    string     `db:"name"`
+	Players [9]*Player `db:"-"`
+	Index   int        `db:"-" json:"-" `
 }
 
 // NewTurn resets the players' status in a team
@@ -113,24 +115,51 @@ type Position struct {
 	Name  string
 }
 
+func GetPositionFromShort(short string) Position {
+	switch short {
+	case Catcher.Short:
+		return Catcher
+	case Pitcher.Short:
+		return Pitcher
+	case First.Short:
+		return First
+	case Second.Short:
+		return Second
+	case Third.Short:
+		return Third
+	case Shortstop.Short:
+		return Shortstop
+	case Left.Short:
+		return Left
+	case Center.Short:
+		return Center
+	case Right.Short:
+		return Right
+	}
+
+	return Position{}
+}
+
 // Player represents a single player
 type Player struct {
-	Power        int
-	Contact      int
-	Eye          int
-	Speed        int
-	Defense      int
-	Fastball     int
-	Changeup     int
-	Breaking     int
-	Control      int
-	Batting      int
-	Name         string
-	Status       string `json:"-"`
-	Position     Position
-	BatterTarget uint8
-	PitchDie     PitchDie
-	Hand         string
+	Power        int       `db:"batter_pow"`
+	Contact      int       `db:"batter_con"`
+	Eye          int       `db:"batter_eye"`
+	Speed        int       `db:"batter_spd"`
+	Defense      int       `db:"batter_def"`
+	Fastball     int       `db:"pitcher_fb"`
+	Changeup     int       `db:"pitcher_ch"`
+	Breaking     int       `db:"pitcher_bb"`
+	Control      int       `db:"pitcher_ctl"`
+	Batting      int       `db:"pitcher_bat"`
+	Name         string    `db:"name"`
+	Status       string    `db:"-" json:"-"`
+	Position     Position  `db:"position"`
+	BatterTarget uint8     `db:"-"`
+	PitchDie     PitchDie  `db:"-"`
+	Hand         string    `db:"hand"`
+	ID           uuid.UUID `db:"id"`
+	TeamID       uuid.UUID `db:"idteam"`
 }
 
 // NewPlayer returns a new player
@@ -171,3 +200,64 @@ func (p *Player) CalculateDie() {
 		p.PitchDie = PitchAddD12
 	}
 }
+
+// Event type strings
+const (
+	EventOutStr         string = "Out"
+	EventErrorStr       string = "Error"
+	EventCritStr        string = "Critical hit"
+	EventHitStr         string = "Hit"
+	EventWalkStr        string = "Walk"
+	EventProdOutStr     string = "Productive out"
+	EventPossibleDblStr string = "Possible double"
+)
+
+// Team keys
+const (
+	TeamAway string = "away"
+	TeamHome string = "home"
+)
+
+// Base names
+const (
+	BaseFirst  string = "First"
+	BaseSecond string = "Second"
+	BaseThird  string = "Third"
+	BaseHome   string = "Home"
+)
+
+// Player status names
+const (
+	StatusBase    string = "On base"
+	StatusOnDeck  string = "On deck"
+	StatusWaiting string = "Waiting"
+	StatusOut     string = "Out"
+)
+
+// Positions
+const (
+	PositionPitcher byte = iota
+	PositionCatcher
+	PositionFirst
+	PositionSecond
+	PositionThird
+	PositionShortstop
+	PositionLeft
+	PositionCenter
+	PositionRight
+)
+
+type PitchDie string
+
+const (
+	PitchNone   PitchDie = "NONE"
+	PitchAddD12 PitchDie = "D12"
+	PitchAddD8  PitchDie = "D8"
+	PitchAddD4  PitchDie = "D4"
+	PitchSubD4  PitchDie = "-D4"
+)
+
+const (
+	HalfTop    string = "Top"
+	HalfBottom string = "Bottom"
+)

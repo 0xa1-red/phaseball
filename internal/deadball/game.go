@@ -3,7 +3,11 @@ package deadball
 import (
 	"fmt"
 
+	"github.com/0xa1-red/phaseball/internal/deadball/model"
 	"github.com/0xa1-red/phaseball/internal/dice"
+	"github.com/0xa1-red/phaseball/internal/logger"
+	"github.com/0xa1-red/phaseball/internal/logger/logcore"
+	"github.com/google/uuid"
 )
 
 /**
@@ -11,33 +15,36 @@ Game represents a single baseball match.
 A game runs for at least 9 turns consisting of a top and a bottom inning.
 If the score (runs) is even after 9 turns, the game goes into overtime, meaning the first full
 turn with a winning score ends the game.
-
-TODO: The game should end if the team playing the bottom inning in the last round is in the lead
 */
 type Game struct {
-	Turns []*Turn
-	Teams map[string]*Team
-	Log   *GameLog
+	ID     uuid.UUID
+	Turns  []*Turn
+	Teams  map[string]*model.Team
+	Log    *GameLog
+	NewLog logcore.GameLog
 }
 
 func (g *Game) NewInning(num uint8, half string) *Inning {
 	switch half {
 	case HalfTop:
-		return NewInning(g.Teams[TeamAway], g.Teams[TeamHome].Pitcher(), g.Log, num, half)
+		return NewInning(g.Teams[TeamAway], g.Teams[TeamHome].Pitcher(), g.Log, g.NewLog, num, half)
 	case HalfBottom:
-		return NewInning(g.Teams[TeamHome], g.Teams[TeamAway].Pitcher(), g.Log, num, half)
+		return NewInning(g.Teams[TeamHome], g.Teams[TeamAway].Pitcher(), g.Log, g.NewLog, num, half)
 	}
 
 	return &Inning{}
 }
 
-func New(away, home Team) *Game {
+func New(away, home model.Team) *Game {
+	id := uuid.New()
 	return &Game{
+		ID:    id,
 		Turns: make([]*Turn, 0),
-		Teams: map[string]*Team{
+		Teams: map[string]*model.Team{
 			TeamAway: &away,
 			TeamHome: &home,
 		},
+		NewLog: logger.NewGameLogger(id),
 	}
 }
 
@@ -65,11 +72,15 @@ func (g *Game) Run() {
 
 		log.Debugf("Inning %d - TOP - %s\n", i+1, g.Teams[TeamAway].Name)
 		turn.Top.Run()
-		g.Log.AddInning(i+1, TeamAway, turn.Top.Hits, turn.Top.Runs)
+
+		// if it's the bottom of the 9th inning and the away team is losing, the game is over
+		if inning, r := i+1, g.Score(); inning == 9 && r[TeamAway] < r[TeamHome] {
+			turn.Bottom.Skipped = true
+			return
+		}
 
 		log.Debugf("Inning %d - BOTTOM - %s\n", i+1, g.Teams[TeamHome].Name)
 		turn.Bottom.Run()
-		g.Log.AddInning(i+1, TeamHome, turn.Bottom.Hits, turn.Bottom.Runs)
 		g.Turns = append(g.Turns, turn)
 	}
 
@@ -88,12 +99,10 @@ func (g *Game) Run() {
 
 			log.Debugf("Inning %d - TOP - %s\n", i+1, g.Teams[TeamAway].Name)
 			turn.Top.Run()
-			g.Log.AddInning(i+1, TeamAway, turn.Top.Hits, turn.Top.Runs)
 
 			log.Debugf("Inning %d - BOTTOM - %s\n", i+1, g.Teams[TeamHome].Name)
 			turn.Bottom.Run()
 			g.Turns = append(g.Turns, turn)
-			g.Log.AddInning(i+1, TeamHome, turn.Bottom.Hits, turn.Bottom.Runs)
 
 			runs := g.Score()
 			awayRuns = runs[TeamAway]
@@ -112,26 +121,29 @@ type Turn struct {
 
 // Inning represents a teams turn at batting
 type Inning struct {
-	Number  uint8
-	Outs    uint8
-	Hits    uint8
-	Runs    uint8
-	Half    string
-	Logger  *GameLog
-	Team    *Team
-	Pitcher *Player
-	Diamond *Diamond
+	Skipped   bool
+	Number    uint8
+	Outs      uint8
+	Hits      uint8
+	Runs      uint8
+	Half      string
+	Logger    *GameLog
+	NewLogger logcore.GameLog
+	Team      *model.Team
+	Pitcher   *model.Player
+	Diamond   *Diamond
 }
 
 // NewInning creates a new inning for a team
-func NewInning(team *Team, pitcher *Player, log *GameLog, num uint8, half string) *Inning {
+func NewInning(team *model.Team, pitcher *model.Player, log *GameLog, newLog logcore.GameLog, num uint8, half string) *Inning {
 	inning := Inning{
-		Team:    team,
-		Pitcher: pitcher,
-		Number:  num,
-		Half:    half,
-		Logger:  log,
-		Diamond: GetDiamond(),
+		Team:      team,
+		Pitcher:   pitcher,
+		Number:    num,
+		Half:      half,
+		Logger:    log,
+		Diamond:   GetDiamond(),
+		NewLogger: newLog,
 	}
 
 	inning.Team.NewTurn(false)
@@ -148,21 +160,45 @@ func (i *Inning) Run() {
 	i.Team.NewTurn(false)
 
 	i.Pitcher.CalculateDie()
-	fmt.Println()
-	fmt.Printf("%s %d | Pitching: %s | %d/%d/%d | Pitch die: %s\n",
-		i.Half,
-		i.Number,
-		i.Pitcher.Name,
-		i.Pitcher.Fastball,
-		i.Pitcher.Changeup,
-		i.Pitcher.Breaking,
-		i.Pitcher.PitchDie,
+
+	// fmt.Println()
+	// fmt.Printf("%s %d | Pitching: %s | %d/%d/%d | Pitch die: %s\n",
+	// 	i.Half,
+	// 	i.Number,
+	// 	i.Pitcher.Name,
+	// 	i.Pitcher.Fastball,
+	// 	i.Pitcher.Changeup,
+	// 	i.Pitcher.Breaking,
+	// 	i.Pitcher.PitchDie,
+	// )
+	msg := "new inning"
+	if i.Half == HalfBottom {
+		msg = "new half"
+	}
+	i.NewLogger.Write(msg,
+		logcore.Int("inning", i.Number),
+		logcore.String("half", i.Half),
+		logcore.String("pitcher", i.Pitcher.Name),
+		logcore.Int("fastball", i.Pitcher.Fastball),
+		logcore.Int("changeup", i.Pitcher.Changeup),
+		logcore.Int("breaking", i.Pitcher.Breaking),
+		logcore.String("pitch_die", string(i.Pitcher.PitchDie)),
 	)
 
 	for i.Outs < 3 {
 		i.AtBat()
 	}
-	fmt.Printf("=> Hits: %d | Runs: %d\n", i.Hits, i.Runs)
+	msg = "end of half"
+	if i.Half == HalfBottom {
+		msg = "end of inning"
+	}
+	i.NewLogger.Write(msg,
+		logcore.Int("inning", i.Number),
+		logcore.String("half", i.Half),
+		logcore.Int("hits", i.Hits),
+		logcore.Int("runs", i.Runs),
+	)
+	// fmt.Printf("=> Hits: %d | Runs: %d\n", i.Hits, i.Runs)
 }
 
 func (i *Inning) ToLog() *InningLog {
@@ -183,8 +219,8 @@ type InningLog struct {
 	Runs   uint8
 }
 
-func (i *Inning) ProductiveOut(swing int, outEvent Event) (Event, []*Player) {
-	runners := make([]*Player, 0)
+func (i *Inning) ProductiveOut(swing int, outEvent Event) (Event, []*model.Player) {
+	runners := make([]*model.Player, 0)
 	event := outEvent
 	if swing < 70 && IsOutOutfield(outEvent) && i.Outs < 3 {
 		if p2 := i.Diamond.Bases[1].Player; p2 != nil {
@@ -203,7 +239,7 @@ func (i *Inning) ProductiveOut(swing int, outEvent Event) (Event, []*Player) {
 	return event, runners
 }
 
-func (i *Inning) PossibleDouble(swing int, outEvent Event, p *Player) Event {
+func (i *Inning) PossibleDouble(swing int, outEvent Event, p *model.Player) Event {
 	event := outEvent
 	digit := LastDigit(swing)
 	if i.Diamond.Bases[0].Player != nil && IsOutInfield(outEvent) && digit >= 3 && digit < 7 {
@@ -243,12 +279,19 @@ func (i *Inning) AtBat() {
 
 	batterTarget := pow + con + eye
 
-	fmt.Printf("\tAt bat: %s | %d/%d/%d | Batting Target: %d\n",
-		batter.Name,
-		pow,
-		con,
-		eye,
-		batterTarget,
+	// fmt.Printf("\tAt bat: %s | %d/%d/%d | Batting Target: %d\n",
+	// 	batter.Name,
+	// 	pow,
+	// 	con,
+	// 	eye,
+	// 	batterTarget,
+	// )
+	i.NewLogger.Write("at bat",
+		logcore.String("name", batter.Name),
+		logcore.Int("power", pow),
+		logcore.Int("contact", con),
+		logcore.Int("eye", eye),
+		logcore.Int("batter_target", batterTarget),
 	)
 
 	pickPitch := dice.Roll(6, 1, 0)
@@ -280,22 +323,30 @@ func (i *Inning) AtBat() {
 			pitchMod -= batter.Eye
 		}
 	}
-	fmt.Printf("\t\t%s is throwing a %s!\n", i.Pitcher.Name, pitch)
+	// fmt.Printf("\t\t%s is throwing a %s!\n", i.Pitcher.Name, pitch)
+	i.NewLogger.Write("pitch", logcore.String("pitcher", i.Pitcher.Name), logcore.String("pitch", pitch))
 	_, pitchRoll := i.Pitcher.Pitch(batter.Hand)
 
 	roll := dice.Roll(100, 1, 0)
 	swing := roll + pitchRoll + pitchMod
 	event := swingEvent(swing, batterTarget)
-	fmt.Printf("\t\t%s swings their bat... (d100: %d; Pitch roll: %d; Pitch modifier: %d; MSS: %d)\n",
-		batter.Name,
-		roll,
-		pitchRoll,
-		pitchMod,
-		swing,
+	// fmt.Printf("\t\t%s swings their bat... (d100: %d; Pitch roll: %d; Pitch modifier: %d; MSS: %d)\n",
+	// 	batter.Name,
+	// 	roll,
+	// 	pitchRoll,
+	// 	pitchMod,
+	// 	swing,
+	// )
+	i.NewLogger.Write("swing",
+		logcore.String("name", batter.Name),
+		logcore.Int("swing_roll", roll),
+		logcore.Int("pitch_roll", pitchRoll),
+		logcore.Int("pitch_modifier", pitchMod),
+		logcore.Int("swing_score", swing),
 	)
 
 	var scored int
-	runners := []*Player{}
+	runners := []*model.Player{}
 	switch event {
 	case EventProdOut, EventPossibleDbl:
 		batter.Status = StatusOut
@@ -402,6 +453,7 @@ func (i *Inning) AtBat() {
 		}
 	}
 
+	logEvent := ""
 	if batter.Status == StatusOut {
 		outEvent := Out(swing)
 		l.Event = outEvent
@@ -409,20 +461,27 @@ func (i *Inning) AtBat() {
 			if event, prunners := i.ProductiveOut(swing, outEvent); event == EventHitProductiveOut {
 				runners = append(runners, prunners...)
 				l.Event = event
-				fmt.Printf("\t\tResult: %s\n", event.Label)
+				// fmt.Printf("\t\tResult: %s\n", event.Label)
+				logEvent = event.Label
 			} else {
-
-				fmt.Printf("\t\tResult: %s\n", outEvent.Label)
+				// fmt.Printf("\t\tResult: %s\n", outEvent.Label)
+				logEvent = outEvent.Label
 			}
 		} else if event == EventPossibleDbl && i.Outs < 2 {
 			outEvent := i.PossibleDouble(swing, outEvent, batter)
 			l.Event = outEvent
-			fmt.Printf("\t\tResult: %s\n", outEvent.Label)
+			// fmt.Printf("\t\tResult: %s\n", outEvent.Label)
+			logEvent = outEvent.Label
 		} else {
-			fmt.Printf("\t\tResult: %s\n", outEvent.Label)
+			// fmt.Printf("\t\tResult: %s\n", outEvent.Label)
+			logEvent = outEvent.Label
 		}
+
+		i.NewLogger.Write("out", logcore.String("name", batter.Name), logcore.String("event", logEvent))
 	} else {
-		fmt.Printf("\t\tResult: %s\n", event.Label)
+		// fmt.Printf("\t\tResult: %s\n", event.Label)
+		logEvent = event.Label
+		i.NewLogger.Write("hit", logcore.String("name", batter.Name), logcore.String("event", logEvent))
 	}
 
 	if Verbosity() == verboseDebug {
@@ -435,12 +494,13 @@ func (i *Inning) AtBat() {
 		i.Runs = i.Runs + uint8(scored)
 		log.Debugf("\t\tRBI: %d\n", scored)
 
-		for i, p := range runners {
-			if i == 0 {
-				fmt.Printf("\tAnd a run comes in: %s\n", p.Name)
-			} else {
-				fmt.Printf("\tAnd another run comes in: %s\n", p.Name)
-			}
+		for _, p := range runners {
+			i.NewLogger.Write("run", logcore.String("name", p.Name), logcore.String("batter", batter.Name))
+			// 	if i == 0 {
+			// 		fmt.Printf("\tAnd a run comes in: %s\n", p.Name)
+			// 	} else {
+			// 		fmt.Printf("\tAnd another run comes in: %s\n", p.Name)
+			// 	}
 		}
 	}
 
@@ -527,8 +587,8 @@ func GetDiamond() *Diamond {
 }
 
 // Advance pushes a batter up n bases
-func (d *Diamond) Advance(p *Player, bases int) []*Player {
-	runs := make([]*Player, 0)
+func (d *Diamond) Advance(p *model.Player, bases int) []*model.Player {
+	runs := make([]*model.Player, 0)
 	if bases == 4 {
 		for i := len(d.Bases) - 1; i >= 0; i-- {
 			// For every player on base we add a run, reset their status and remove from the diamond
@@ -557,22 +617,22 @@ func (d *Diamond) Advance(p *Player, bases int) []*Player {
 }
 
 // Single is a shorthand for advancing a base
-func (d *Diamond) Single(p *Player) []*Player {
+func (d *Diamond) Single(p *model.Player) []*model.Player {
 	return d.Advance(p, 1)
 }
 
 // Double is a shorthand for advancing 2 bases
-func (d *Diamond) Double(p *Player) []*Player {
+func (d *Diamond) Double(p *model.Player) []*model.Player {
 	return d.Advance(p, 2)
 }
 
 // Triple is a shorthand for advancing 3 bases
-func (d *Diamond) Triple(p *Player) []*Player {
+func (d *Diamond) Triple(p *model.Player) []*model.Player {
 	return d.Advance(p, 3)
 }
 
 // HomeRun is a shorthand for running in and clearing all loaded bases
-func (d *Diamond) HomeRun(p *Player) []*Player {
+func (d *Diamond) HomeRun(p *model.Player) []*model.Player {
 	return d.Advance(p, 4)
 }
 
@@ -580,12 +640,12 @@ func (d *Diamond) HomeRun(p *Player) []*Player {
 type Base struct {
 	Name   string
 	Next   *Base
-	Player *Player
+	Player *model.Player
 }
 
 // Load puts a player on a base or in some cases pushes a player further from that base
 // without loading it.
-func (b *Base) Load(p *Player) *Player {
+func (b *Base) Load(p *model.Player) *model.Player {
 	pp := "empty"
 	if p != nil {
 		pp = p.Name

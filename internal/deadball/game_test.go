@@ -4,7 +4,24 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+
+	"github.com/0xa1-red/phaseball/internal/deadball/model"
+	"github.com/0xa1-red/phaseball/internal/logger/stdout"
 )
+
+var team = model.Team{
+	Players: [9]*model.Player{
+		model.NewPlayer("Anna Test", model.Pitcher),
+		model.NewPlayer("Bob Test", model.Catcher),
+		model.NewPlayer("Clyde Test", model.First),
+		model.NewPlayer("Doris Test", model.Second),
+		model.NewPlayer("Elmer Test", model.Third),
+		model.NewPlayer("Frank Test", model.Shortstop),
+		model.NewPlayer("Gillian Test", model.Left),
+		model.NewPlayer("Helen Test", model.Center),
+		model.NewPlayer("Ian Test", model.Right),
+	},
+}
 
 func TestGame_Score(t *testing.T) {
 	game := Game{
@@ -96,7 +113,7 @@ func TestInning_PossibleDouble(t *testing.T) {
 			{
 				GetDiamond().Reset()
 				team.NewTurn(true)
-				i := NewInning(&team, &Player{Name: "Peter Test"}, &GameLog{}, 1, HalfTop)
+				i := NewInning(&team, &model.Player{Name: "Peter Test"}, &GameLog{}, stdout.New(), 1, HalfTop)
 				i.Outs = tt.outs
 				i.Diamond.Bases[0].Player = team.Players[0]
 
@@ -126,9 +143,9 @@ func TestInning_ProductiveOut(t *testing.T) {
 	tests := []struct {
 		label         string
 		outEvent      Event
-		p2            *Player
-		p3            *Player
-		expectedRuns  []*Player
+		p2            *model.Player
+		p3            *model.Player
+		expectedRuns  []*model.Player
 		expectedEvent Event
 	}{
 		{
@@ -136,7 +153,7 @@ func TestInning_ProductiveOut(t *testing.T) {
 			outEvent:      EventOutF7,
 			p2:            nil,
 			p3:            nil,
-			expectedRuns:  make([]*Player, 0),
+			expectedRuns:  make([]*model.Player, 0),
 			expectedEvent: EventOutF7,
 		},
 		{
@@ -144,7 +161,7 @@ func TestInning_ProductiveOut(t *testing.T) {
 			outEvent:      EventOutF7,
 			p2:            team.Players[0],
 			p3:            nil,
-			expectedRuns:  make([]*Player, 0),
+			expectedRuns:  make([]*model.Player, 0),
 			expectedEvent: Event{Label: EventHitProductiveOut.Label, Extra: "F-7"},
 		},
 		{
@@ -152,7 +169,7 @@ func TestInning_ProductiveOut(t *testing.T) {
 			outEvent:      EventOutF7,
 			p2:            team.Players[1],
 			p3:            team.Players[0],
-			expectedRuns:  []*Player{team.Players[0]},
+			expectedRuns:  []*model.Player{team.Players[0]},
 			expectedEvent: Event{Label: EventHitProductiveOut.Label, Extra: "F-7"},
 		},
 		{
@@ -160,7 +177,7 @@ func TestInning_ProductiveOut(t *testing.T) {
 			outEvent:      EventOutF7,
 			p2:            nil,
 			p3:            team.Players[0],
-			expectedRuns:  []*Player{team.Players[0]},
+			expectedRuns:  []*model.Player{team.Players[0]},
 			expectedEvent: Event{Label: EventHitProductiveOut.Label, Extra: "F-7"},
 		},
 	}
@@ -171,7 +188,7 @@ func TestInning_ProductiveOut(t *testing.T) {
 			{
 				GetDiamond().Reset()
 				team.NewTurn(true)
-				i := NewInning(&team, &Player{Name: "Peter Test"}, &GameLog{}, 1, HalfTop)
+				i := NewInning(&team, &model.Player{Name: "Peter Test"}, &GameLog{}, stdout.New(), 1, HalfTop)
 				i.Outs = 1
 				i.Diamond.Bases[1].Player = tt.p2
 				i.Diamond.Bases[2].Player = tt.p3
@@ -219,20 +236,20 @@ func TestHomeRun(t *testing.T) {
 		label         string
 		description   string
 		sequence      []int
-		expectedBases []*Player
-		expectedRuns  []*Player
+		expectedBases []*model.Player
+		expectedRuns  []*model.Player
 	}{
 		{
 			label:       "bases_empty",
 			description: "Bases are empty and the batter hits a HR",
 			sequence:    []int{4},
-			expectedBases: []*Player{
+			expectedBases: []*model.Player{
 				nil,
 				nil,
 				nil,
 				nil,
 			},
-			expectedRuns: []*Player{
+			expectedRuns: []*model.Player{
 				team.Players[0],
 			},
 		},
@@ -240,13 +257,13 @@ func TestHomeRun(t *testing.T) {
 			label:       "bases_scarce",
 			description: "First and third are empty and the batter hits a HR",
 			sequence:    []int{3, 1, 4},
-			expectedBases: []*Player{
+			expectedBases: []*model.Player{
 				nil,
 				nil,
 				nil,
 				nil,
 			},
-			expectedRuns: []*Player{
+			expectedRuns: []*model.Player{
 				team.Players[0],
 				team.Players[1],
 				team.Players[2],
@@ -256,13 +273,13 @@ func TestHomeRun(t *testing.T) {
 			label:       "bases_loaded",
 			description: "Bases are loaded and the 4th batter hits a HR",
 			sequence:    []int{1, 1, 1, 4},
-			expectedBases: []*Player{
+			expectedBases: []*model.Player{
 				nil,
 				nil,
 				nil,
 				nil,
 			},
-			expectedRuns: []*Player{
+			expectedRuns: []*model.Player{
 				team.Players[0],
 				team.Players[1],
 				team.Players[2],
@@ -277,7 +294,7 @@ func TestHomeRun(t *testing.T) {
 			{
 				GetDiamond().Reset()
 				team.NewTurn(true)
-				var actualRuns []*Player
+				var actualRuns []*model.Player
 				for _, step := range tt.sequence {
 					actualRuns = append(actualRuns, inning.Diamond.Advance(team.AtBat(), step)...)
 				}
@@ -316,17 +333,17 @@ func TestSinglesGetRun(t *testing.T) {
 		Diamond: GetDiamond(),
 	}
 
-	expectedBases := []*Player{
+	expectedBases := []*model.Player{
 		team.Players[3],
 		team.Players[2],
 		team.Players[1],
 		nil,
 	}
 
-	var expectedRuns []*Player = []*Player{
+	var expectedRuns []*model.Player = []*model.Player{
 		team.Players[0],
 	}
-	var actualRuns []*Player
+	var actualRuns []*model.Player
 	actualRuns = append(actualRuns, inning.Diamond.Advance(team.Players[0], 1)...)
 	actualRuns = append(actualRuns, inning.Diamond.Advance(team.Players[1], 1)...)
 	actualRuns = append(actualRuns, inning.Diamond.Advance(team.Players[2], 1)...)
@@ -364,17 +381,17 @@ func TestTwoSinglesAndDouble(t *testing.T) {
 		Diamond: GetDiamond(),
 	}
 
-	expectedBases := []*Player{
+	expectedBases := []*model.Player{
 		nil,
 		team.Players[2],
 		team.Players[1],
 		nil,
 	}
 
-	var expectedRuns []*Player = []*Player{
+	var expectedRuns []*model.Player = []*model.Player{
 		team.Players[0],
 	}
-	var actualRuns []*Player
+	var actualRuns []*model.Player
 	actualRuns = append(actualRuns, inning.Diamond.Advance(team.Players[0], 1)...)
 	actualRuns = append(actualRuns, inning.Diamond.Advance(team.Players[1], 1)...)
 	actualRuns = append(actualRuns, inning.Diamond.Advance(team.Players[2], 2)...)
@@ -411,17 +428,17 @@ func TestOneSingleAndTriple(t *testing.T) {
 		Diamond: GetDiamond(),
 	}
 
-	expectedBases := []*Player{
+	expectedBases := []*model.Player{
 		nil,
 		nil,
 		team.Players[1],
 		nil,
 	}
 
-	var expectedRuns []*Player = []*Player{
+	var expectedRuns []*model.Player = []*model.Player{
 		team.Players[0],
 	}
-	var actualRuns []*Player
+	var actualRuns []*model.Player
 	actualRuns = append(actualRuns, inning.Diamond.Advance(team.Players[0], 1)...)
 	actualRuns = append(actualRuns, inning.Diamond.Advance(team.Players[1], 3)...)
 

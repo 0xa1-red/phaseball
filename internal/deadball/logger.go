@@ -5,6 +5,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/0xa1-red/phaseball/internal/deadball/model"
 	"github.com/0xa1-red/phaseball/internal/logger"
 	"github.com/op/go-logging"
 )
@@ -49,13 +50,13 @@ type Score struct {
 
 type GameLog struct {
 	PlayedAt time.Time
-	Away     *Team
-	Home     *Team
+	Away     *model.Team
+	Home     *model.Team
 	Entries  []LogEntry
 	BoxScore map[string]Score
 }
 
-func NewGameLog(away, home *Team) *GameLog {
+func NewGameLog(away, home *model.Team) *GameLog {
 	return &GameLog{
 		PlayedAt: time.Now(),
 		Away:     away,
@@ -80,7 +81,7 @@ func (g *GameLog) String() string {
 func (g *GameLog) AddInning(inning int, team string, hits, runs uint8) {
 	if _, ok := g.BoxScore[team]; !ok {
 		g.BoxScore[team] = Score{
-			Innings: make(map[int]int, 0),
+			Innings: make(map[int]int),
 			Hits:    0,
 			Runs:    0,
 		}
@@ -95,8 +96,8 @@ func (g *GameLog) AddInning(inning int, team string, hits, runs uint8) {
 
 type LogEntry struct {
 	Inning  *InningLog
-	Batter  *Player
-	Pitcher *Player
+	Batter  *model.Player
+	Pitcher *model.Player
 	Event   Event
 	Runs    int
 	Extra   map[string]interface{}
