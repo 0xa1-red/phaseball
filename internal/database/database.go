@@ -10,8 +10,10 @@ import (
 	"github.com/0xa1-red/phaseball/internal/config"
 	"github.com/0xa1-red/phaseball/internal/deadball/model"
 	"github.com/0xa1-red/phaseball/internal/logger/logcore"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
+	_ "github.com/lib/pq"
 )
 
 var db *Conn
@@ -231,4 +233,51 @@ func (c *Conn) WriteGameLog(gameID uuid.UUID, entries []logcore.Entry) error {
 	}
 	wg.Wait()
 	return nil
+}
+
+func (c *Conn) GetGameLog(gameID uuid.UUID) (*logcore.GameReplay, error) {
+	tx, err := c.Beginx()
+	if err != nil {
+		return nil, err
+	}
+
+	// Query game
+	gameMeta := make(map[string]interface{})
+	gameRow := tx.QueryRowx("SELECT id, idaway, idhome FROM games WHERE id = $1", gameID)
+	if err := gameRow.MapScan(gameMeta); err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	awayID, err := uuid.ParseBytes(gameMeta["idaway"].([]byte))
+	if err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	homeID, err := uuid.ParseBytes(gameMeta["idhome"].([]byte))
+	if err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	away := model.Team{}
+	if err := tx.QueryRowx("SELECT id, name FROM teams WHERE id = $1", awayID.String()).StructScan(&away); err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	home := model.Team{}
+	if err := tx.QueryRowx("SELECT id, name FROM teams WHERE id = $1", homeID.String()).StructScan(&home); err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	spew.Dump(gameID, away, home)
+
+	return nil, nil
+	// Query away
+	// Query home
+	// Query entries
+
 }

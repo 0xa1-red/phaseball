@@ -6,6 +6,7 @@ import (
 	"sort"
 	"sync"
 
+	"github.com/0xa1-red/phaseball/internal/deadball/model"
 	"github.com/google/uuid"
 )
 
@@ -26,6 +27,13 @@ type EntryCollection struct {
 	entries []Entry
 	mx      *sync.Mutex
 	seq     int
+}
+
+type GameReplay struct {
+	ID      uuid.UUID
+	Away    model.Team
+	Home    model.Team
+	Entries EntryCollection
 }
 
 func (c *EntryCollection) Add(entry Entry) error {

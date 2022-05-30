@@ -30,7 +30,7 @@ func (l *Logger) SetWithTimestamp(t bool) {
 }
 
 func New(opts ...logcore.LoggerOpt) *Logger {
-	path := config.Get().Logging.Path
+	path := config.Get().GameLog.Path
 	if path == "" {
 		log.Println("Path is not set for logging, not creating logger facility")
 		return nil
