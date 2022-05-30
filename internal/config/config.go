@@ -1,16 +1,15 @@
 package config
 
 import (
-	"log"
 	"os"
 
 	"gopkg.in/yaml.v3"
 )
 
 type Settings struct {
-	Service  ServiceSettings  `json:"service"`
-	GameLog  GameLogSettings  `json:"game_log"`
-	Database DatabaseSettings `json:"database"`
+	Service  ServiceSettings  `yaml:"service"`
+	GameLog  GameLogSettings  `yaml:"game_log"`
+	Database DatabaseSettings `yaml:"database"`
 }
 
 type ServiceSettings struct {
@@ -45,8 +44,6 @@ func Init(path string) error {
 	}
 
 	settings.defaults()
-
-	log.Println(settings.Service.Address)
 
 	return nil
 }

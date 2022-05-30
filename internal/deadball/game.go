@@ -22,6 +22,16 @@ type Game struct {
 	Teams  map[string]*model.Team
 	Log    *GameLog
 	NewLog logcore.GameLog
+
+	PlayByPlay bool
+}
+
+type GameOption func(g *Game)
+
+func WithPlayByPlay() GameOption {
+	return func(g *Game) {
+		g.PlayByPlay = true
+	}
 }
 
 func (g *Game) NewInning(num uint8, half string) *Inning {
@@ -35,9 +45,9 @@ func (g *Game) NewInning(num uint8, half string) *Inning {
 	return &Inning{}
 }
 
-func New(away, home model.Team) *Game {
+func New(away, home model.Team, opts ...GameOption) *Game {
 	id := uuid.New()
-	return &Game{
+	g := &Game{
 		ID:    id,
 		Turns: make([]*Turn, 0),
 		Teams: map[string]*model.Team{
@@ -46,6 +56,12 @@ func New(away, home model.Team) *Game {
 		},
 		NewLog: logger.NewGameLogger(id),
 	}
+
+	for _, opt := range opts {
+		opt(g)
+	}
+
+	return g
 }
 
 func (g *Game) Score() map[string]uint8 {
@@ -71,7 +87,7 @@ func (g *Game) Run() {
 		}
 
 		log.Debugf("Inning %d - TOP - %s\n", i+1, g.Teams[TeamAway].Name)
-		turn.Top.Run()
+		turn.Top.Run(g.PlayByPlay)
 
 		// if it's the bottom of the 9th inning and the away team is losing, the game is over
 		if inning, r := i+1, g.Score(); inning == 9 && r[TeamAway] < r[TeamHome] {
@@ -80,7 +96,7 @@ func (g *Game) Run() {
 		}
 
 		log.Debugf("Inning %d - BOTTOM - %s\n", i+1, g.Teams[TeamHome].Name)
-		turn.Bottom.Run()
+		turn.Bottom.Run(g.PlayByPlay)
 		g.Turns = append(g.Turns, turn)
 	}
 
@@ -98,10 +114,10 @@ func (g *Game) Run() {
 			}
 
 			log.Debugf("Inning %d - TOP - %s\n", i+1, g.Teams[TeamAway].Name)
-			turn.Top.Run()
+			turn.Top.Run(g.PlayByPlay)
 
 			log.Debugf("Inning %d - BOTTOM - %s\n", i+1, g.Teams[TeamHome].Name)
-			turn.Bottom.Run()
+			turn.Bottom.Run(g.PlayByPlay)
 			g.Turns = append(g.Turns, turn)
 
 			runs := g.Score()
@@ -117,6 +133,8 @@ func (g *Game) Run() {
 type Turn struct {
 	Top    *Inning
 	Bottom *Inning
+
+	PlayByPlay bool
 }
 
 // Inning represents a teams turn at batting
@@ -156,26 +174,17 @@ func NewInning(team *model.Team, pitcher *model.Player, log *GameLog, newLog log
 }
 
 // Run simulates an inning
-func (i *Inning) Run() {
+func (i *Inning) Run(playByPlay bool) {
 	i.Team.NewTurn(false)
 
 	i.Pitcher.CalculateDie()
 
-	// fmt.Println()
-	// fmt.Printf("%s %d | Pitching: %s | %d/%d/%d | Pitch die: %s\n",
-	// 	i.Half,
-	// 	i.Number,
-	// 	i.Pitcher.Name,
-	// 	i.Pitcher.Fastball,
-	// 	i.Pitcher.Changeup,
-	// 	i.Pitcher.Breaking,
-	// 	i.Pitcher.PitchDie,
-	// )
-	msg := "new inning"
+	period := "inning"
 	if i.Half == HalfBottom {
-		msg = "new half"
+		period = "half"
 	}
-	i.NewLogger.Write(msg,
+
+	i.NewLogger.Write(fmt.Sprintf("start of %s", period),
 		logcore.Int("inning", i.Number),
 		logcore.String("half", i.Half),
 		logcore.String("pitcher", i.Pitcher.Name),
@@ -187,18 +196,24 @@ func (i *Inning) Run() {
 
 	for i.Outs < 3 {
 		i.AtBat()
+		if playByPlay {
+			fmt.Scanln() // nolint
+		}
 	}
-	msg = "end of half"
+	period = "half"
 	if i.Half == HalfBottom {
-		msg = "end of inning"
+		period = "inning"
 	}
-	i.NewLogger.Write(msg,
+	i.NewLogger.Write(fmt.Sprintf("end of %s", period),
 		logcore.Int("inning", i.Number),
 		logcore.String("half", i.Half),
 		logcore.Int("hits", i.Hits),
 		logcore.Int("runs", i.Runs),
 	)
-	// fmt.Printf("=> Hits: %d | Runs: %d\n", i.Hits, i.Runs)
+	// fmt.Printf("End of %s. Hits: %d | Runs: %d\n", period, i.Hits, i.Runs)
+	if playByPlay {
+		fmt.Scanln() // nolint
+	}
 }
 
 func (i *Inning) ToLog() *InningLog {
