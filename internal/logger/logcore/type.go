@@ -29,11 +29,18 @@ type EntryCollection struct {
 	seq     int
 }
 
+func NewEntryCollection() *EntryCollection {
+	return &EntryCollection{
+		entries: make([]Entry, 0),
+		mx:      &sync.Mutex{},
+	}
+}
+
 type GameReplay struct {
 	ID      uuid.UUID
 	Away    model.Team
 	Home    model.Team
-	Entries EntryCollection
+	Entries *EntryCollection
 }
 
 func (c *EntryCollection) Add(entry Entry) error {

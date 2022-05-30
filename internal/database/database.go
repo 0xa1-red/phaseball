@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"sync"
+	"time"
 
 	"github.com/0xa1-red/phaseball/internal/config"
 	"github.com/0xa1-red/phaseball/internal/deadball/model"
@@ -275,9 +276,43 @@ func (c *Conn) GetGameLog(gameID uuid.UUID) (*logcore.GameReplay, error) {
 
 	spew.Dump(gameID, away, home)
 
-	return nil, nil
-	// Query away
-	// Query home
-	// Query entries
+	rows, err := tx.Queryx("SELECT seq, created_at, entry FROM game_logs WHERE idgame = $1 ORDER BY seq DESC", gameID)
+	if err != nil {
+		return nil, err
+	}
 
+	entryCollection := logcore.NewEntryCollection()
+	defer rows.Close()
+	for rows.Next() {
+		res := make(map[string]interface{})
+		if err := rows.MapScan(res); err != nil {
+			return nil, err
+		}
+
+		ts := res["created_at"].(time.Time)
+		entry := make(map[string]interface{})
+		b := bytes.NewBuffer(res["entry"].([]byte))
+		decoder := json.NewDecoder(b)
+		if err := decoder.Decode(&entry); err != nil {
+			return nil, err
+		}
+		r := logcore.Entry{
+			Seq:       int(res["seq"].(int64)),
+			Timestamp: ts.Format(time.RFC3339Nano),
+			Entry:     entry,
+		}
+
+		if err := entryCollection.Add(r); err != nil {
+			return nil, err
+		}
+	}
+
+	gameLog := &logcore.GameReplay{
+		ID:      gameID,
+		Away:    away,
+		Home:    home,
+		Entries: entryCollection,
+	}
+
+	return gameLog, nil
 }

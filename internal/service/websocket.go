@@ -3,9 +3,11 @@ package service
 import (
 	"errors"
 	"log"
+	"math/rand"
 	"net/http"
 	"time"
 
+	"github.com/0xa1-red/phaseball/internal/database"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
@@ -24,14 +26,20 @@ func handleGameReplay(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// db, err := database.Connection()
-	// if err != nil {
-	// 	log.Println(err.Error())
-	// 	http.Error(w, "Error establishing database connection", http.StatusInternalServerError)
-	//  return
-	// }
+	db, err := database.Connection()
+	if err != nil {
+		log.Println(err.Error())
+		http.Error(w, "Error establishing database connection", http.StatusInternalServerError)
+		return
+	}
 
-	// game := db.Get
+	game, err := db.GetGameLog(gameID)
+	if err != nil {
+		log.Println(err.Error())
+		http.Error(w, "Error retrieving game replay", http.StatusInternalServerError)
+		return
+	}
+	entries := game.Entries.Entries()
 
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -55,6 +63,7 @@ func handleGameReplay(w http.ResponseWriter, r *http.Request) {
 	})
 
 	go func() {
+		i := 0
 		for {
 			select {
 			case <-ticker.C:
@@ -62,13 +71,16 @@ func handleGameReplay(w http.ResponseWriter, r *http.Request) {
 				update := map[string]interface{}{
 					"game_id":   gameID.String(),
 					"timestamp": time.Now().Format(time.RFC3339Nano),
+					"entry":     entries[i],
 				}
 				if err := conn.WriteJSON(update); err != nil {
 					log.Println(err)
 					conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseInternalServerErr, err.Error())) // nolint
 					return
 				}
-				ticker = time.NewTimer(1 * time.Second)
+				i++
+				r := time.Duration(rand.Intn(4000) + 1000)
+				ticker = time.NewTimer(r * time.Millisecond)
 			case <-stop:
 				ticker.Stop()
 				return
