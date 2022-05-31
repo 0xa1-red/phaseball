@@ -210,7 +210,7 @@ func (i *Inning) Run(playByPlay bool) {
 		logcore.Int("hits", i.Hits),
 		logcore.Int("runs", i.Runs),
 	)
-	// fmt.Printf("End of %s. Hits: %d | Runs: %d\n", period, i.Hits, i.Runs)
+
 	if playByPlay {
 		fmt.Scanln() // nolint
 	}
@@ -294,13 +294,6 @@ func (i *Inning) AtBat() {
 
 	batterTarget := pow + con + eye
 
-	// fmt.Printf("\tAt bat: %s | %d/%d/%d | Batting Target: %d\n",
-	// 	batter.Name,
-	// 	pow,
-	// 	con,
-	// 	eye,
-	// 	batterTarget,
-	// )
 	i.NewLogger.Write(logcore.AtBat,
 		logcore.String("name", batter.Name),
 		logcore.Int("power", pow),
@@ -338,20 +331,14 @@ func (i *Inning) AtBat() {
 			pitchMod -= batter.Eye
 		}
 	}
-	// fmt.Printf("\t\t%s is throwing a %s!\n", i.Pitcher.Name, pitch)
+
 	i.NewLogger.Write(logcore.Pitch, logcore.String("pitcher", i.Pitcher.Name), logcore.String("pitch", pitch))
 	_, pitchRoll := i.Pitcher.Pitch(batter.Hand)
 
 	roll := dice.Roll(100, 1, 0)
 	swing := roll + pitchRoll + pitchMod
 	event := swingEvent(swing, batterTarget)
-	// fmt.Printf("\t\t%s swings their bat... (d100: %d; Pitch roll: %d; Pitch modifier: %d; MSS: %d)\n",
-	// 	batter.Name,
-	// 	roll,
-	// 	pitchRoll,
-	// 	pitchMod,
-	// 	swing,
-	// )
+
 	i.NewLogger.Write(logcore.Swing,
 		logcore.String("name", batter.Name),
 		logcore.Int("swing_roll", roll),
@@ -468,7 +455,7 @@ func (i *Inning) AtBat() {
 		}
 	}
 
-	logEvent := ""
+	var logEvent Event
 	if batter.Status == StatusOut {
 		outEvent := Out(swing)
 		l.Event = outEvent
@@ -476,27 +463,22 @@ func (i *Inning) AtBat() {
 			if event, prunners := i.ProductiveOut(swing, outEvent); event == EventHitProductiveOut {
 				runners = append(runners, prunners...)
 				l.Event = event
-				// fmt.Printf("\t\tResult: %s\n", event.Label)
-				logEvent = event.Label
+				logEvent = event
 			} else {
-				// fmt.Printf("\t\tResult: %s\n", outEvent.Label)
-				logEvent = outEvent.Label
+				logEvent = outEvent
 			}
 		} else if event == EventPossibleDbl && i.Outs < 2 {
 			outEvent := i.PossibleDouble(swing, outEvent, batter)
 			l.Event = outEvent
-			// fmt.Printf("\t\tResult: %s\n", outEvent.Label)
-			logEvent = outEvent.Label
+			logEvent = outEvent
 		} else {
-			// fmt.Printf("\t\tResult: %s\n", outEvent.Label)
-			logEvent = outEvent.Label
+			logEvent = outEvent
 		}
 
-		i.NewLogger.Write("out", logcore.String("name", batter.Name), logcore.String("event", logEvent))
+		i.NewLogger.Write("out", logcore.String("name", batter.Name), logcore.String("event", logEvent.Label), logcore.String("event_long", logEvent.GetLong()))
 	} else {
-		// fmt.Printf("\t\tResult: %s\n", event.Label)
-		logEvent = event.Label
-		i.NewLogger.Write("hit", logcore.String("name", batter.Name), logcore.String("event", logEvent))
+		logEvent = event
+		i.NewLogger.Write("hit", logcore.String("name", batter.Name), logcore.String("event", logEvent.Label), logcore.String("event_long", logEvent.GetLong()))
 	}
 
 	if Verbosity() == verboseDebug {
@@ -511,11 +493,6 @@ func (i *Inning) AtBat() {
 
 		for _, p := range runners {
 			i.NewLogger.Write("run", logcore.String("name", p.Name), logcore.String("batter", batter.Name))
-			// 	if i == 0 {
-			// 		fmt.Printf("\tAnd a run comes in: %s\n", p.Name)
-			// 	} else {
-			// 		fmt.Printf("\tAnd another run comes in: %s\n", p.Name)
-			// 	}
 		}
 	}
 

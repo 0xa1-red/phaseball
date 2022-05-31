@@ -96,8 +96,9 @@ func startOfPeriod(entryMap logcore.EntryMap) string {
 }
 
 func endOfPeriod(entryMap logcore.EntryMap) string {
-	return fmt.Sprintf("%s %d. Hits: %d | Runs: %d\n",
+	return fmt.Sprintf("%s: %s %d. Hits: %d | Runs: %d\n",
 		prettyMessages[entryMap.String("msg")],
+		entryMap.String("half"),
 		entryMap.Int64("inning"),
 		entryMap.Int64("hits"),
 		entryMap.Int64("runs"),
@@ -123,7 +124,7 @@ func pitch(entryMap logcore.EntryMap) string {
 }
 
 func swing(entryMap logcore.EntryMap) string {
-	return fmt.Sprintf("%s swings their bat... (d100: %d; Pitch roll: %d; Pitch modifier: %d; MSS: %d",
+	return fmt.Sprintf("%s swings their bat... (d100: %d; Pitch roll: %d; Pitch modifier: %d; MSS: %d)",
 		entryMap.String("name"),
 		entryMap.Int64("swing_roll"),
 		entryMap.Int64("pitch_roll"),
@@ -133,16 +134,22 @@ func swing(entryMap logcore.EntryMap) string {
 }
 
 func out(entryMap logcore.EntryMap) string {
-	return fmt.Sprintf("%s out for a %s",
+	return fmt.Sprintf("%s is out: %s",
 		entryMap.String("name"),
-		entryMap.String("event"),
+		entryMap.String("event_long"),
 	)
 }
 
 func hit(entryMap logcore.EntryMap) string {
-	return fmt.Sprintf("%s hits for a %s",
+	event := entryMap.String("event_long")
+	if event == "Walk" {
+		return fmt.Sprintf("%s walks to first",
+			entryMap.String("name"),
+		)
+	}
+	return fmt.Sprintf("%s puts the ball in play: %s",
 		entryMap.String("name"),
-		entryMap.String("event"),
+		event,
 	)
 }
 

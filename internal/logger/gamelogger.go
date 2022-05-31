@@ -1,8 +1,6 @@
 package logger
 
 import (
-	"log"
-
 	"github.com/0xa1-red/phaseball/internal/config"
 	"github.com/0xa1-red/phaseball/internal/logger/json"
 	"github.com/0xa1-red/phaseball/internal/logger/logcore"
@@ -20,7 +18,6 @@ const (
 )
 
 func NewGameLogger(id uuid.UUID) logcore.GameLog {
-	log.Println(config.Get().GameLog.Kind)
 	switch config.Get().GameLog.Kind {
 	default:
 		fallthrough
@@ -31,7 +28,6 @@ func NewGameLogger(id uuid.UUID) logcore.GameLog {
 	case KindJSON:
 		return json.New(logcore.WithTimestamp(), logcore.WithGameID(id))
 	case KindPretty:
-		log.Println("Creating 'pretty' logger")
 		return pretty.New(logcore.WithTimestamp(), logcore.WithGameID(id))
 	}
 }

@@ -36,17 +36,17 @@ var (
 
 	EventHitHomeRun Event = Event{Label: "HOME_RUN", Long: "Home run", Extra: ""}
 
-	EventHitProductiveOut  Event = Event{Label: "PRODUCTIVE_OUT", Long: "", Extra: ""}
-	EventHitDoublePlay     Event = Event{Label: "DOUBLE_PLAY", Long: "", Extra: ""}
-	EventHitFieldersChoice Event = Event{Label: "FIELDERS_CHOICE", Long: "", Extra: ""}
+	EventHitProductiveOut  Event = Event{Label: "PRODUCTIVE_OUT", Long: "Productive out", Extra: ""}
+	EventHitDoublePlay     Event = Event{Label: "DOUBLE_PLAY", Long: "Double play", Extra: ""}
+	EventHitFieldersChoice Event = Event{Label: "FIELDERS_CHOICE", Long: "Fielder's choice", Extra: ""}
 
 	EventWalk        Event = Event{Label: "WALK", Long: "Walk", Extra: ""}
 	EventOut         Event = Event{Label: "OUT", Long: "Out", Extra: ""}
 	EventCrit        Event = Event{Label: "CRITICAL_HIT", Long: "Critical hit", Extra: ""}
 	EventError       Event = Event{Label: "ERROR", Long: "Error", Extra: ""}
 	EventHit         Event = Event{Label: "HIT", Long: "Hit", Extra: ""}
-	EventProdOut     Event = Event{Label: "PRODUCTIVE_OUT", Long: "", Extra: ""}
-	EventPossibleDbl Event = Event{Label: "POSSIBLE_DOUBLE", Long: "", Extra: ""}
+	EventProdOut     Event = Event{Label: "PRODUCTIVE_OUT", Long: "Productive out", Extra: ""}
+	EventPossibleDbl Event = Event{Label: "POSSIBLE_DOUBLE", Long: "Possible double", Extra: ""}
 
 	EventOutK  Event = Event{Label: EventOut.Label, Long: "Strikeout", Extra: "K"}
 	EventOutG3 Event = Event{Label: EventOut.Label, Long: "Groundout to first", Extra: "G-3"}
