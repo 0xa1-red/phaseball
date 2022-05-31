@@ -4,9 +4,33 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/0xa1-red/phaseball/internal/deadball/model"
 	"github.com/0xa1-red/phaseball/internal/logger/logcore"
 	"github.com/google/uuid"
 )
+
+var prettyMessages = map[string]string{
+	logcore.StartOfHalf:   "Start of half",
+	logcore.StartOfInning: "Start of inning",
+	logcore.EndOfHalf:     "End of half",
+	logcore.EndOfInning:   "End of inning",
+	logcore.AtBat:         "At bat",
+}
+
+type decoratorFn func(logcore.EntryMap) string
+
+var decorators = map[string]decoratorFn{
+	logcore.StartOfHalf:   startOfPeriod,
+	logcore.StartOfInning: startOfPeriod,
+	logcore.EndOfHalf:     endOfPeriod,
+	logcore.EndOfInning:   endOfPeriod,
+	logcore.AtBat:         atBat,
+	logcore.Pitch:         pitch,
+	logcore.Swing:         swing,
+	logcore.Out:           out,
+	logcore.Hit:           hit,
+	logcore.Run:           run,
+}
 
 type Logger struct {
 	WithTimestamp bool
@@ -36,21 +60,21 @@ func (l *Logger) Close() error {
 }
 
 func (l *Logger) Write(message string, fields ...logcore.Field) error {
-	var str string
-	switch message {
-	case logcore.StartOfHalf:
-		str = startOfPeriod("half", fields)
-	case logcore.StartOfInning:
-		str = startOfPeriod("inning", fields)
-	case logcore.EndOfHalf:
-		str = endOfPeriod("half", fields)
-	case logcore.EndOfInning:
-		str = endOfPeriod("inning", fields)
-	case logcore.AtBat:
-		str = atBat(fields)
-	default:
-		str = message
+	entryMap := logcore.EntryMap{
+		"msg": message,
 	}
+
+	for _, field := range fields {
+		field.Apply(entryMap)
+	}
+
+	fn, ok := decorators[message]
+	if !ok {
+		return fmt.Errorf("Invalid key for decorator: %s", message)
+	}
+
+	str := fn(entryMap)
+
 	if l.WithTimestamp {
 		str = fmt.Sprintf("%s - %s", time.Now().Format(time.RFC3339), str)
 	}
@@ -58,59 +82,72 @@ func (l *Logger) Write(message string, fields ...logcore.Field) error {
 	return nil
 }
 
-func startOfPeriod(period string, fields []logcore.Field) string {
-	entryMap := map[string]interface{}{
-		"msg": fmt.Sprintf("Start of %s", period),
-	}
-
-	for _, field := range fields {
-		field.Apply(entryMap)
-	}
-
+func startOfPeriod(entryMap logcore.EntryMap) string {
 	return fmt.Sprintf("%s: %s %d | Pitching: %s | %d/%d/%d | Pitch die: %s",
-		entryMap["msg"].(string),
-		entryMap["half"].(string),
-		entryMap["inning"].(int64),
-		entryMap["pitcher"].(string),
-		entryMap["fastball"].(int64),
-		entryMap["changeup"].(int64),
-		entryMap["breaking"].(int64),
-		entryMap["pitch_die"].(string),
+		prettyMessages[entryMap.String("msg")],
+		entryMap.String("half"),
+		entryMap.Int64("inning"),
+		entryMap.String("pitcher"),
+		entryMap.Int64("fastball"),
+		entryMap.Int64("changeup"),
+		entryMap.Int64("breaking"),
+		entryMap.String("pitch_die"),
 	)
 }
 
-func endOfPeriod(period string, fields []logcore.Field) string {
-	entryMap := map[string]interface{}{
-		"msg": fmt.Sprintf("End of %s", period),
-	}
-
-	for _, field := range fields {
-		field.Apply(entryMap)
-	}
-
+func endOfPeriod(entryMap logcore.EntryMap) string {
 	return fmt.Sprintf("%s %d. Hits: %d | Runs: %d\n",
-		entryMap["msg"].(string),
-		entryMap["inning"].(int64),
-		entryMap["hits"].(int64),
-		entryMap["runs"].(int64),
+		prettyMessages[entryMap.String("msg")],
+		entryMap.Int64("inning"),
+		entryMap.Int64("hits"),
+		entryMap.Int64("runs"),
 	)
 }
 
-func atBat(fields []logcore.Field) string {
-	entryMap := map[string]interface{}{
-		"msg": "At bat",
-	}
-
-	for _, field := range fields {
-		field.Apply(entryMap)
-	}
-
+func atBat(entryMap logcore.EntryMap) string {
 	return fmt.Sprintf("%s: %s | %d/%d/%d | Batting Target: %d",
-		entryMap["msg"].(string),
-		entryMap["name"].(string),
-		entryMap["power"].(int64),
-		entryMap["contact"].(int64),
-		entryMap["eye"].(int64),
-		entryMap["batter_target"].(int64),
+		prettyMessages[entryMap.String("msg")],
+		entryMap.String("name"),
+		entryMap.Int64("power"),
+		entryMap.Int64("contact"),
+		entryMap.Int64("eye"),
+		entryMap.Int64("batter_target"),
+	)
+}
+
+func pitch(entryMap logcore.EntryMap) string {
+	return fmt.Sprintf("%s is throwing a %s!",
+		entryMap.String("pitcher"),
+		model.PitchLabels[entryMap["pitch"].(string)],
+	)
+}
+
+func swing(entryMap logcore.EntryMap) string {
+	return fmt.Sprintf("%s swings their bat... (d100: %d; Pitch roll: %d; Pitch modifier: %d; MSS: %d",
+		entryMap.String("name"),
+		entryMap.Int64("swing_roll"),
+		entryMap.Int64("pitch_roll"),
+		entryMap.Int64("pitch_modifier"),
+		entryMap.Int64("swing_score"),
+	)
+}
+
+func out(entryMap logcore.EntryMap) string {
+	return fmt.Sprintf("%s out for a %s",
+		entryMap.String("name"),
+		entryMap.String("event"),
+	)
+}
+
+func hit(entryMap logcore.EntryMap) string {
+	return fmt.Sprintf("%s hits for a %s",
+		entryMap.String("name"),
+		entryMap.String("event"),
+	)
+}
+
+func run(entryMap logcore.EntryMap) string {
+	return fmt.Sprintf("%s comes in for a run!",
+		entryMap.String("name"),
 	)
 }

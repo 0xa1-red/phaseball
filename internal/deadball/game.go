@@ -179,12 +179,12 @@ func (i *Inning) Run(playByPlay bool) {
 
 	i.Pitcher.CalculateDie()
 
-	period := "inning"
+	msg := logcore.StartOfInning
 	if i.Half == HalfBottom {
-		period = "half"
+		msg = logcore.StartOfHalf
 	}
 
-	i.NewLogger.Write(fmt.Sprintf("start of %s", period),
+	i.NewLogger.Write(msg,
 		logcore.Int("inning", i.Number),
 		logcore.String("half", i.Half),
 		logcore.String("pitcher", i.Pitcher.Name),
@@ -200,11 +200,11 @@ func (i *Inning) Run(playByPlay bool) {
 			fmt.Scanln() // nolint
 		}
 	}
-	period = "half"
+	msg = logcore.EndOfHalf
 	if i.Half == HalfBottom {
-		period = "inning"
+		msg = logcore.EndOfInning
 	}
-	i.NewLogger.Write(fmt.Sprintf("end of %s", period),
+	i.NewLogger.Write(msg,
 		logcore.Int("inning", i.Number),
 		logcore.String("half", i.Half),
 		logcore.Int("hits", i.Hits),
@@ -301,7 +301,7 @@ func (i *Inning) AtBat() {
 	// 	eye,
 	// 	batterTarget,
 	// )
-	i.NewLogger.Write("at bat",
+	i.NewLogger.Write(logcore.AtBat,
 		logcore.String("name", batter.Name),
 		logcore.Int("power", pow),
 		logcore.Int("contact", con),
@@ -314,7 +314,7 @@ func (i *Inning) AtBat() {
 	var pitch string
 	switch pickPitch {
 	case 1, 2:
-		pitch = "FASTBALL"
+		pitch = model.PitchFastball
 		pitchMod = i.Pitcher.Fastball
 		if batter.Position.ID == PositionPitcher {
 			pitchMod -= batter.Batting
@@ -322,7 +322,7 @@ func (i *Inning) AtBat() {
 			pitchMod -= batter.Power
 		}
 	case 3, 4:
-		pitch = "CHANGEUP"
+		pitch = model.PitchChangeup
 		pitchMod = i.Pitcher.Changeup
 		if batter.Position.ID == PositionPitcher {
 			pitchMod -= batter.Batting
@@ -330,7 +330,7 @@ func (i *Inning) AtBat() {
 			pitchMod -= batter.Contact
 		}
 	case 5, 6:
-		pitch = "BREAKING BALL"
+		pitch = model.PitchBreaking
 		pitchMod = i.Pitcher.Breaking
 		if batter.Position.ID == PositionPitcher {
 			pitchMod -= batter.Batting
@@ -339,7 +339,7 @@ func (i *Inning) AtBat() {
 		}
 	}
 	// fmt.Printf("\t\t%s is throwing a %s!\n", i.Pitcher.Name, pitch)
-	i.NewLogger.Write("pitch", logcore.String("pitcher", i.Pitcher.Name), logcore.String("pitch", pitch))
+	i.NewLogger.Write(logcore.Pitch, logcore.String("pitcher", i.Pitcher.Name), logcore.String("pitch", pitch))
 	_, pitchRoll := i.Pitcher.Pitch(batter.Hand)
 
 	roll := dice.Roll(100, 1, 0)
@@ -352,7 +352,7 @@ func (i *Inning) AtBat() {
 	// 	pitchMod,
 	// 	swing,
 	// )
-	i.NewLogger.Write("swing",
+	i.NewLogger.Write(logcore.Swing,
 		logcore.String("name", batter.Name),
 		logcore.Int("swing_roll", roll),
 		logcore.Int("pitch_roll", pitchRoll),

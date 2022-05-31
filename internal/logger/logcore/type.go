@@ -23,6 +23,31 @@ type Entry struct {
 	Entry     map[string]interface{}
 }
 
+type GameReplay struct {
+	ID      uuid.UUID
+	Away    model.Team
+	Home    model.Team
+	Entries *EntryCollection
+}
+
+type EntryMap map[string]interface{}
+
+func (e EntryMap) String(key string) string {
+	if s, ok := e[key].(string); ok {
+		return s
+	} else {
+		return ""
+	}
+}
+
+func (e EntryMap) Int64(key string) int64 {
+	if s, ok := e[key].(int64); ok {
+		return s
+	} else {
+		return 0
+	}
+}
+
 type EntryCollection struct {
 	entries []Entry
 	mx      *sync.Mutex
@@ -34,13 +59,6 @@ func NewEntryCollection() *EntryCollection {
 		entries: make([]Entry, 0),
 		mx:      &sync.Mutex{},
 	}
-}
-
-type GameReplay struct {
-	ID      uuid.UUID
-	Away    model.Team
-	Home    model.Team
-	Entries *EntryCollection
 }
 
 func (c *EntryCollection) Add(entry Entry) error {
@@ -86,7 +104,7 @@ type Number interface {
 }
 
 type Field interface {
-	Apply(m map[string]interface{})
+	Apply(m EntryMap)
 }
 
 type StringField struct {
@@ -98,7 +116,7 @@ func String(key, value string) StringField {
 	return StringField{Key: key, Value: value}
 }
 
-func (s StringField) Apply(m map[string]interface{}) {
+func (s StringField) Apply(m EntryMap) {
 	m[s.Key] = s.Value
 }
 
@@ -111,7 +129,7 @@ func Float(key string, value float64) FloatField {
 	return FloatField{Key: key, Value: value}
 }
 
-func (s FloatField) Apply(m map[string]interface{}) {
+func (s FloatField) Apply(m EntryMap) {
 	m[s.Key] = s.Value
 }
 
@@ -125,6 +143,6 @@ func Int[V Number](key string, value V) IntegerField {
 	return IntegerField{Key: key, Value: val}
 }
 
-func (s IntegerField) Apply(m map[string]interface{}) {
+func (s IntegerField) Apply(m EntryMap) {
 	m[s.Key] = s.Value
 }

@@ -6,4 +6,9 @@ const (
 	EndOfInning   string = "end of inning"
 	EndOfHalf     string = "end of half"
 	AtBat         string = "at bat"
+	Pitch         string = "pitch"
+	Swing         string = "swing"
+	Out           string = "out"
+	Hit           string = "hit"
+	Run           string = "run"
 )
